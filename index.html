@@ -1,359 +1,107 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Neon Shogi Manager</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
-<style>
-    :root {
-        --bg-color: #050510;
-        --text-color: #fff;
-        --neon-blue: #00f3ff;
-        --neon-pink: #ff00ff;
-        --neon-green: #0aff0a;
-        --glass-bg: rgba(255, 255, 255, 0.05);
-        --border-color: rgba(0, 243, 255, 0.3);
-    }
-
-    body {
-        font-family: 'Orbitron', sans-serif; /* デジタル時計のようなフォント */
-        background-color: var(--bg-color);
-        color: var(--text-color);
-        padding: 20px;
-        margin: 0;
-        text-align: center;
-    }
-
-    h1, h2, h3 {
-        text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue);
-        letter-spacing: 2px;
-    }
-
-    /* 各エリアのコンテナデザイン */
-    .container {
-        background: var(--glass-bg);
-        border: 1px solid var(--border-color);
-        box-shadow: 0 0 15px rgba(0, 243, 255, 0.1);
-        border-radius: 10px;
-        padding: 20px;
-        margin: 20px auto;
-        max-width: 900px;
-        backdrop-filter: blur(5px);
-    }
-
-    /* 入力フォーム周り */
-    select {
-        background: #000;
-        color: var(--neon-blue);
-        border: 1px solid var(--neon-blue);
-        padding: 10px;
-        border-radius: 5px;
-        font-family: inherit;
-        font-size: 1rem;
-        box-shadow: 0 0 5px var(--neon-blue);
-    }
-
-    /* ボタンデザイン */
-    button {
-        background: transparent;
-        color: var(--neon-pink);
-        border: 1px solid var(--neon-pink);
-        padding: 10px 20px;
-        font-family: inherit;
-        font-size: 1rem;
-        border-radius: 5px;
-        cursor: pointer;
-        transition: 0.3s;
-        box-shadow: 0 0 5px var(--neon-pink);
-        text-transform: uppercase;
-        margin: 5px;
-    }
-
-    button:hover {
-        background: var(--neon-pink);
-        color: #fff;
-        box-shadow: 0 0 20px var(--neon-pink);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>将棋 通算勝敗表</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
     
-    /* 追加ボタン専用色 */
-    .add-btn {
-        color: var(--neon-green);
-        border-color: var(--neon-green);
-        box-shadow: 0 0 5px var(--neon-green);
-    }
-    .add-btn:hover {
-        background: var(--neon-green);
-        color: #000;
-        box-shadow: 0 0 20px var(--neon-green);
-    }
-
-    /* テーブルデザイン */
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 10px;
-        color: #fff;
-    }
-
-    th, td {
-        border: 1px solid var(--border-color);
-        padding: 12px;
-        text-align: center;
-    }
-
-    th {
-        background: rgba(0, 243, 255, 0.1);
-        color: var(--neon-blue);
-        text-shadow: 0 0 5px var(--neon-blue);
-    }
-
-    .win-text { color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green); }
-    .loss-text { color: #666; } /* 負けの文字は目立たせない */
-
-    /* グラフエリア */
-    .chart-wrapper {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 20px;
-    }
-    .chart-box {
-        width: 300px;
-        padding: 10px;
-        background: rgba(0,0,0,0.3);
-        border-radius: 10px;
-        border: 1px solid #333;
-    }
-</style>
-</head>
-<body>
-
-<h1>NEON SHOGI BATTLE</h1>
-
-<div class="container">
-    <h2>INPUT RESULT</h2>
-    <div>
-        <select id="winner"></select>
-        <span style="margin: 0 10px;">WIN</span>
-        <select id="loser"></select>
-    </div>
-    <div style="margin-top: 20px;">
-        <button onclick="recordResult()">RECORD</button>
-        <button onclick="addNewPlayer()" class="add-btn">+ ADD PLAYER</button>
-    </div>
-</div>
-
-<div class="container">
-    <h2>SCORE TABLE</h2>
-    <table id="scoreTable"></table>
-</div>
-
-<div class="container">
-    <h2>WIN RATIO</h2>
-    <div id="chartsContainer" class="chart-wrapper"></div>
-</div>
-
-<script>
-    // --- 初期設定 ---
-    let players = ['Aさん', 'Bさん', 'Cさん'];
-    let results = {};
-    let chartInstances = [];
-
-    // --- データ初期化 ---
-    function initializeData() {
-        results = {};
-        players.forEach(p1 => {
-            results[p1] = {};
-            players.forEach(p2 => {
-                if (p1 !== p2) {
-                    results[p1][p2] = { win: 0, loss: 0 };
-                }
-            });
-        });
-    }
-
-    function initializeUI() {
-        updateDropdowns();
-        updateTable();
-        createCharts();
-    }
-    
-    initializeData();
-    initializeUI();
-
-    // --- 関数群 ---
-
-    // プレイヤー追加機能
-    function addNewPlayer() {
-        let newName = prompt("新規参加者の名前を入力してください:");
-        if (newName) {
-            // ここでスペースを完全削除
-            newName = newName.replace(/\s+/g, '');
-            
-            if (newName && !players.includes(newName)) {
-                players.push(newName);
-                
-                // データ構造を再構築（既存の成績は消えますが、簡易実装のため）
-                // ※本来は既存データを保持しつつ新メンバーの行だけ足す処理が必要ですが
-                // 今回は「追加ボタン」の実装を優先してリセット型にしています
-                initializeData(); 
-                initializeUI();
-                
-                alert(`PLAYER [ ${newName} ] ADDED.`);
-            } else if (players.includes(newName)) {
-                alert("ALREADY EXISTS.");
-            }
+    <style>
+        :root {
+            --bg-color: #121212; --card-bg: #1e1e1e; --neon-green: #39ff14;
+            --neon-blue: #00ffff; --neon-pink: #ff00ff; --text-color: #e0e0e0;
+            --danger-color: #ff3333;
         }
-    }
-
-    function updateDropdowns() {
-        const winnerSelect = document.getElementById('winner');
-        const loserSelect = document.getElementById('loser');
-        winnerSelect.innerHTML = '';
-        loserSelect.innerHTML = '';
-
-        players.forEach(player => {
-            let optionW = document.createElement('option');
-            optionW.value = player;
-            optionW.text = player;
-            winnerSelect.appendChild(optionW);
-
-            let optionL = document.createElement('option');
-            optionL.value = player;
-            optionL.text = player;
-            loserSelect.appendChild(optionL);
-        });
-        if(players.length > 1) loserSelect.selectedIndex = 1;
-    }
-
-    function recordResult() {
-        const winner = document.getElementById('winner').value;
-        const loser = document.getElementById('loser').value;
-
-        if (winner === loser) {
-            alert("Same player selected.");
-            return;
+        body {
+            font-family: "M PLUS Rounded 1c", sans-serif;
+            max-width: 1000px; margin: 0 auto; padding: 20px;
+            background-color: var(--bg-color); color: var(--neon-green);
+            text-shadow: 0 0 5px rgba(57, 255, 20, 0.5); padding-bottom: 100px;
         }
 
-        results[winner][loser].win += 1;
-        results[loser][winner].loss += 1;
+        /* ローディング画面 */
+        #loading-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999;
+            display: flex; justify-content: center; align-items: center;
+            flex-direction: column; color: var(--neon-green); font-size: 1.5rem;
+            transition: opacity 0.5s ease;
+        }
 
-        updateTable();
-        updateCharts();
-    }
+        /* ヘッダー */
+        .header-container { display: flex; align-items: center; justify-content: space-between; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid var(--neon-green); }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .shogi-icon svg { width: 70px; height: 70px; fill: none; stroke: var(--neon-green); stroke-width: 3; filter: drop-shadow(0 0 5px var(--neon-green)); }
+        .title-group h1 { font-size: 2.2rem; margin: 0; font-weight: 800; letter-spacing: 2px; }
+        .subtitle { font-size: 1rem; color: var(--neon-blue); letter-spacing: 3px; font-weight: 700; text-shadow: 0 0 5px var(--neon-blue); }
+        .last-updated { font-size: 0.8rem; color: #888; text-align: right; align-self: flex-end; }
 
-    function updateTable() {
-        const table = document.getElementById('scoreTable');
-        table.innerHTML = '';
+        /* カード */
+        .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--neon-green); box-shadow: 0 0 15px rgba(57, 255, 20, 0.1); margin-bottom: 30px; }
+        h2 { font-size: 1.4rem; border-bottom: 2px solid var(--neon-green); padding-bottom: 10px; margin-top: 0; color: var(--neon-blue); text-shadow: 0 0 5px var(--neon-blue); font-weight: 700; }
 
-        let thead = table.createTHead();
-        let headerRow = thead.insertRow();
-        let th0 = document.createElement('th');
-        th0.textContent = 'vs';
-        headerRow.appendChild(th0);
-        
-        players.forEach(player => {
-            let th = document.createElement('th');
-            th.textContent = player;
-            headerRow.appendChild(th);
-        });
-        let thTotal = document.createElement('th');
-        thTotal.textContent = 'TOTAL';
-        headerRow.appendChild(thTotal);
+        /* テーブル */
+        .table-responsive { overflow-x: auto; }
+        table.ranking-table { width: 100%; min-width: 600px; border-collapse: separate; border-spacing: 0; margin-top: 10px; border: 1px solid var(--neon-green); border-radius: 8px; overflow: hidden; }
+        table.ranking-table th, table.ranking-table td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #333; font-size: 1rem; }
+        table.ranking-table th { background-color: #000; color: var(--neon-blue); font-weight: 700; border-bottom: 1px solid var(--neon-green); }
+        .rank-1 { background-color: rgba(57, 255, 20, 0.1); font-weight: bold; }
+        .score-win { color: var(--neon-pink); font-weight: bold; }
+        .score-loss { color: var(--neon-blue); }
 
-        let tbody = table.createTBody();
-        players.forEach(p1 => {
-            let row = tbody.insertRow();
-            let thCell = document.createElement('th');
-            thCell.textContent = p1;
-            row.appendChild(thCell);
+        /* マトリクス */
+        .matrix-scroll { overflow-x: auto; }
+        table.matrix-table { width: 100%; min-width: 400px; border-collapse: collapse; margin-top: 10px; }
+        table.matrix-table th, table.matrix-table td { border: 1px solid #444; padding: 10px; text-align: center; font-size: 1rem; }
+        table.matrix-table th { background: #000; color: var(--neon-green); }
+        .diagonal-cell { background: #111; }
 
-            let totalWins = 0;
-            let totalLosses = 0;
+        /* グラフ */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .stats-card { background: #000; padding: 15px; border-radius: 8px; border: 1px solid #333; }
+        .stats-header { text-align: center; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; font-weight: bold; font-size: 1.2rem; }
+        .charts-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
+        .chart-wrapper { flex: 1; min-width: 140px; max-width: 220px; text-align: center; background: #111; padding: 10px; border-radius: 8px; border: 1px solid #333; }
+        .chart-title { font-size: 0.9rem; margin-bottom: 5px; color: #ccc; }
+        .chart-score { font-size: 1rem; margin-top: 5px; font-weight: bold; }
 
-            players.forEach(p2 => {
-                let cell = row.insertCell();
-                if (p1 === p2) {
-                    cell.textContent = '-';
-                    cell.style.backgroundColor = "rgba(255,255,255,0.1)";
-                } else {
-                    const res = results[p1][p2];
-                    cell.innerHTML = `<span class="win-text">${res.win}</span> - <span class="loss-text">${res.loss}</span>`;
-                    totalWins += res.win;
-                    totalLosses += res.loss;
-                }
-            });
+        /* バナー */
+        .streak-banner { background: rgba(0, 0, 0, 0.6); border: 1px dashed var(--neon-pink); color: var(--neon-pink); padding: 10px; text-align: center; border-radius: 8px; margin-bottom: 15px; font-weight: bold; display: none; text-shadow: 0 0 5px var(--neon-pink); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0.4); } 50% { box-shadow: 0 0 0 10px rgba(255, 0, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0); } }
+        .badge { display: inline-block; font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; }
+        .badge-crown { font-size: 1.2rem; }
+        .badge-fire { border: 1px solid #ff5722; color: #ff5722; background: rgba(255, 87, 34, 0.1); }
+        .badge-rain { border: 1px solid #2196f3; color: #2196f3; background: rgba(33, 150, 243, 0.1); }
 
-            let totalCell = row.insertCell();
-            totalCell.innerHTML = `<span style="color:#0aff0a">${totalWins}W</span> <span style="color:#666">${totalLosses}L</span>`;
-        });
-    }
+        /* 追加ボタンのスタイル */
+        .add-player-btn {
+            background: transparent;
+            color: var(--neon-green);
+            border: 1px solid var(--neon-green);
+            padding: 8px 15px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 0 5px var(--neon-green);
+            text-transform: uppercase;
+            margin: 5px 0 20px 0;
+            text-shadow: 0 0 5px var(--neon-green);
+        }
+        .add-player-btn:hover {
+            background: var(--neon-green);
+            color: var(--bg-color);
+            box-shadow: 0 0 20px var(--neon-green);
+            text-shadow: none;
+        }
 
-    function createCharts() {
-        const container = document.getElementById('chartsContainer');
-        container.innerHTML = '';
-        chartInstances = [];
-
-        players.forEach((subjectPlayer, index) => {
-            let box = document.createElement('div');
-            box.className = 'chart-box';
-            box.innerHTML = `<h3>${subjectPlayer}</h3><canvas id="chart${index}"></canvas>`;
-            container.appendChild(box);
-
-            const ctx = document.getElementById(`chart${index}`).getContext('2d');
-            
-            let chart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['WIN', 'LOSS'],
-                    datasets: [{
-                        data: [0, 0],
-                        // --- 色の調整 ---
-                        backgroundColor: [
-                            '#00f3ff', // 勝利: 明るいネオンシアン (目立つ)
-                            'rgba(50, 50, 50, 0.5)' // 敗北: 暗い半透明グレー (目立たない)
-                        ],
-                        borderColor: [
-                            '#00f3ff', // 勝利の境界線も光らせる
-                            'transparent' // 敗北は境界線なし
-                        ],
-                        borderWidth: 2,
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    cutout: '70%', // ドーナツの太さを調整（スタイリッシュに）
-                    plugins: {
-                        legend: { 
-                            display: false // 凡例は邪魔なので消してシンプルに
-                        }
-                    }
-                }
-            });
-            chartInstances.push(chart);
-        });
-    }
-
-    function updateCharts() {
-        players.forEach((subjectPlayer, index) => {
-            let totalWins = 0;
-            let totalLosses = 0;
-            players.forEach(opponent => {
-                if (subjectPlayer !== opponent) {
-                    totalWins += results[subjectPlayer][opponent].win;
-                    totalLosses += results[subjectPlayer][opponent].loss;
-                }
-            });
-            if (chartInstances[index]) {
-                chartInstances[index].data.datasets[0].data = [totalWins, totalLosses];
-                chartInstances[index].update();
-            }
-        });
-    }
-</script>
-
-</body>
-</html>
+        /* レスポンシブ */
+        @media (max-width: 600px) {
+            .header-container { flex-direction: column; text-align: center; gap: 10px; }
+            .header-left { flex-direction: column; }
+            .charts-container
