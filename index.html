@@ -38,7 +38,13 @@
         .shogi-icon svg { width: 70px; height: 70px; fill: none; stroke: var(--neon-green); stroke-width: 3; filter: drop-shadow(0 0 5px var(--neon-green)); }
         .title-group h1 { font-size: 2.2rem; margin: 0; font-weight: 800; letter-spacing: 2px; }
         .subtitle { font-size: 1rem; color: var(--neon-blue); letter-spacing: 3px; font-weight: 700; text-shadow: 0 0 5px var(--neon-blue); }
-        .last-updated { font-size: 0.8rem; color: #888; text-align: right; align-self: flex-end; }
+        .last-updated { 
+            font-size: 0.8rem; 
+            color: #888; 
+            text-align: right; 
+            align-self: flex-end; 
+            text-shadow: none; /* 日付は見やすくするためネオン効果を消す */
+        }
 
         /* カード */
         .card { background: var(--card-bg); padding: 25px; border-radius: 12px; border: 1px solid var(--neon-green); box-shadow: 0 0 15px rgba(57, 255, 20, 0.1); margin-bottom: 30px; }
@@ -185,12 +191,9 @@
 
         /**
          * 名前のスペースを削除し、統一したキー（正規化名）を作成する
-         * @param {string} name - プレイヤー名
-         * @returns {string} スペースを除去した名前
          */
         function normalizeName(name) {
             if (!name) return "";
-            // 半角・全角スペースを全て空文字に置換
             return name.toString().replace(/[\s　]+/g, '');
         }
 
@@ -211,41 +214,46 @@
         });
 
         async function init() {
+            // Last-Modifiedヘッダーを取得するためのFetchを試行
+            let excelResponse;
             try {
-                // 1. サーバー(GitHub)からExcelファイルを探す
-                const response = await fetch(EXCEL_FILE_NAME + '?v=' + new Date().getTime());
+                // キャッシュ回避のため、時間をパラメータに付与し、Excelファイルにアクセス
+                excelResponse = await fetch(EXCEL_FILE_NAME + '?v=' + new Date().getTime());
                 
-                if (response.ok) {
-                    const arrayBuffer = await response.arrayBuffer();
-                    parseExcel(arrayBuffer);
-                    
-                    const lastMod = response.headers.get('Last-Modified');
+                if (excelResponse.ok) {
+                    // 1. Last-Modifiedヘッダーから日時を取得し、更新
+                    const lastMod = excelResponse.headers.get('Last-Modified');
                     if (lastMod) {
                         const date = new Date(lastMod);
-                        lastUpdated = date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        lastUpdated = date.toLocaleString('ja-JP', { 
+                            year: 'numeric', month: '2-digit', day: '2-digit', 
+                            hour: '2-digit', minute: '2-digit', second: '2-digit' 
+                        }); // 秒まで表示
                     } else {
-                        lastUpdated = "Excel File Loaded";
+                        lastUpdated = "Excel File Loaded (Time unknown)";
                     }
+
+                    // 2. ファイルを読み込み、解析
+                    const arrayBuffer = await excelResponse.arrayBuffer();
+                    parseExcel(arrayBuffer);
                 } else {
-                    console.warn("Excel file not found. Loading preset data.");
+                    console.warn("Excel file not found or inaccessible. Loading preset data.");
                     loadPresetData();
                     lastUpdated = "Initial Data Mode";
                 }
             } catch (e) {
-                console.error("Fetch failed:", e);
+                console.error("Fetch failed or Excel parse error:", e);
                 loadPresetData();
                 lastUpdated = "Offline Mode";
             } finally {
                 // 描画実行
                 renderAll();
                 
-                // 【画面が真っ暗になる問題を修正するための強制解除処理】
+                // ローディング画面の強制解除処理
                 const loader = document.getElementById('loading-screen');
                 if(loader) {
-                    // トランジションを無効化し、即座に画面を明るくする
                     loader.style.transition = 'none'; 
                     loader.style.opacity = '0';
-                    // 0.1秒後に完全に display: none にする
                     setTimeout(() => {
                         loader.style.display = 'none';
                     }, 100); 
@@ -270,17 +278,15 @@
                 players = jsonPlayers.map(row => ({
                     id: row["ID"],
                     name: row["名前"],
-                    normalizedName: normalizeName(row["名前"]) // <-- 正規化名
+                    normalizedName: normalizeName(row["名前"])
                 }));
 
                 // 対戦結果読み込み (正規化名でマッチング)
                 matches = [];
                 jsonMatches.forEach(row => {
-                    // Excelの勝者・敗者の名前を正規化
                     const wNameNormalized = normalizeName(row["勝者"]);
                     const lNameNormalized = normalizeName(row["敗者"]);
                     
-                    // 正規化名でプレイヤーを探す
                     const wObj = players.find(p => p.normalizedName === wNameNormalized);
                     const lObj = players.find(p => p.normalizedName === lNameNormalized);
                     
@@ -291,7 +297,6 @@
                             timestamp: row["対戦日"] ? new Date(row["対戦日"]).getTime() : Date.now()
                         });
                     } else {
-                        // マッチングできなかったログ
                         console.warn(`Match skipped: Winner: ${row["勝者"]} (Normalized: ${wNameNormalized}), Loser: ${row["敗者"]} (Normalized: ${lNameNormalized}) - Player not found.`);
                     }
                 });
@@ -326,7 +331,6 @@
 
         /**
          * 新しい参加者を追加する機能
-         * ※セッション中のみ有効（リロードでExcelデータに戻ります）
          */
         function addNewPlayer() {
             let newName = prompt("新しい参加者の名前を入力してください:");
@@ -338,7 +342,6 @@
                     return;
                 }
                 
-                // 既存の正規化名リストをチェックして重複を避ける
                 const existingNormalizedNames = players.map(p => p.normalizedName);
 
                 if (existingNormalizedNames.includes(cleanName)) {
@@ -348,14 +351,12 @@
 
                 const newId = players.length > 0 ? Math.max(...players.map(p => p.id)) + 1 : 0;
                 
-                // players配列に新しい参加者を追加
                 players.push({
                     id: newId,
-                    name: newName.trim(), // 表示用の名前は元のまま（ただし端のスペースは削除）
-                    normalizedName: cleanName // 判定用の名前はスペースなし
+                    name: newName.trim(), 
+                    normalizedName: cleanName 
                 });
                 
-                // 集計と描画を再実行
                 calculateAndRender();
                 alert(`「${newName.trim()}」さんを一時的に追加しました。\n(※リロードでExcelデータに戻ります)`);
             }
@@ -367,7 +368,6 @@
         }
 
         function calculateAndRender() {
-            // 集計処理
             let stats = players.map(p => ({
                 id: p.id, name: p.name, wins: 0, losses: 0, total: 0, vs: Array(players.length).fill(0), currentStreak: 0
             }));
@@ -484,8 +484,11 @@
                     const loss = statsData[oppIndex].vs[pIndex];
                     
                     let chartData = [win, loss];
-                    // 勝利は目立つピンク、敗北は薄いグレー
-                    let chartColors = ['var(--neon-pink)', 'rgba(255, 255, 255, 0.1)']; 
+                    // ★円グラフの配色修正: 勝利はピンク、敗北は青系統の薄い色
+                    let chartColors = [
+                        'var(--neon-pink)', // 勝利: 明るいネオンピンク
+                        'rgba(0, 255, 255, 0.2)' // 敗北: 青系統（ネオンブルー）の透明度の高い薄い色
+                    ]; 
                     if (win === 0 && loss === 0) { chartData = [1]; chartColors = ['#333']; }
 
                     chartInstances.push(new Chart(ctx, {
@@ -509,6 +512,9 @@
             });
         }
 
+        /**
+         * 最終更新日時を表示する（init関数で取得したlastUpdatedを使用）
+         */
         function renderLastUpdated() {
             const el = document.getElementById('lastUpdatedDisplay');
             if(el) el.innerText = `Last Updated: ${lastUpdated}`;
