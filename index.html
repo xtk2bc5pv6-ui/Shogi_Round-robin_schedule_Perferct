@@ -14,7 +14,8 @@
         :root {
             --bg-color: #121212; --card-bg: #1e1e1e; --neon-green: #39ff14;
             --neon-blue: #00ffff; --neon-pink: #ff00ff; --text-color: #e0e0e0;
-            --danger-color: #ff3333;
+            /* ネオンレッドをより鮮やかに更新 */
+            --danger-color: #ff073a; 
         }
         body {
             font-family: "M PLUS Rounded 1c", sans-serif;
@@ -56,7 +57,8 @@
         table.ranking-table th, table.ranking-table td { padding: 12px 8px; text-align: center; border-bottom: 1px solid #333; font-size: 1rem; }
         table.ranking-table th { background-color: #000; color: var(--neon-blue); font-weight: 700; border-bottom: 1px solid var(--neon-green); }
         .rank-1 { background-color: rgba(57, 255, 20, 0.1); font-weight: bold; }
-        .score-win { color: var(--neon-pink); font-weight: bold; }
+        /* 勝利の色をネオンレッド変数に変更 */
+        .score-win { color: var(--danger-color); font-weight: bold; text-shadow: 0 0 5px var(--danger-color); }
         .score-loss { color: var(--neon-blue); }
 
         /* マトリクス */
@@ -75,13 +77,13 @@
         .chart-title { font-size: 0.9rem; margin-bottom: 5px; color: #ccc; }
         .chart-score { font-size: 1rem; margin-top: 5px; font-weight: bold; }
 
-        /* バナー */
-        .streak-banner { background: rgba(0, 0, 0, 0.6); border: 1px dashed var(--neon-pink); color: var(--neon-pink); padding: 10px; text-align: center; border-radius: 8px; margin-bottom: 15px; font-weight: bold; display: none; text-shadow: 0 0 5px var(--neon-pink); animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0.4); } 50% { box-shadow: 0 0 0 10px rgba(255, 0, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 0, 255, 0); } }
+        /* バナー（色をネオンレッドに変更） */
+        .streak-banner { background: rgba(0, 0, 0, 0.6); border: 1px dashed var(--danger-color); color: var(--danger-color); padding: 10px; text-align: center; border-radius: 8px; margin-bottom: 15px; font-weight: bold; display: none; text-shadow: 0 0 8px var(--danger-color); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 7, 58, 0.4); } 50% { box-shadow: 0 0 0 10px rgba(255, 7, 58, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 7, 58, 0); } }
         .badge { display: inline-block; font-size: 0.8rem; padding: 2px 6px; border-radius: 4px; margin-left: 5px; }
         .badge-crown { font-size: 1.2rem; }
-        .badge-fire { border: 1px solid #ff5722; color: #ff5722; background: rgba(255, 87, 34, 0.1); }
-        .badge-rain { border: 1px solid #2196f3; color: #2196f3; background: rgba(33, 150, 243, 0.1); }
+        .badge-fire { border: 1px solid var(--danger-color); color: var(--danger-color); background: rgba(255, 7, 58, 0.1); }
+        .badge-rain { border: 1px solid var(--neon-blue); color: var(--neon-blue); background: rgba(0, 255, 255, 0.1); }
 
         /* 追加ボタンのスタイル */
         .add-player-btn {
@@ -192,6 +194,26 @@
         function normalizeName(name) {
             if (!name) return "";
             return name.toString().replace(/[\s　]+/g, '');
+        }
+
+        // --- 新規追加: 斜線パターンを作成する関数 ---
+        function createDiagonalPattern(color) {
+            const patternCanvas = document.createElement('canvas');
+            const patternCtx = patternCanvas.getContext('2d');
+            patternCanvas.width = 10;
+            patternCanvas.height = 10;
+
+            patternCtx.strokeStyle = color;
+            patternCtx.lineWidth = 2;
+            patternCtx.beginPath();
+            patternCtx.moveTo(0, 0);
+            patternCtx.lineTo(10, 10);
+            // 継ぎ目を滑らかにするための補助線
+            patternCtx.moveTo(8, -2); patternCtx.lineTo(12, 2);
+            patternCtx.moveTo(-2, 8); patternCtx.lineTo(2, 12);
+            patternCtx.stroke();
+
+            return patternCtx.createPattern(patternCanvas, 'repeat');
         }
 
         window.addEventListener('DOMContentLoaded', async () => {
@@ -448,20 +470,39 @@
                     const loss = statsData[oppIndex].vs[pIndex];
                     
                     let chartData = [win, loss];
-                    // 【修正箇所】変数ではなく直接カラーコードを指定
-                    let chartColors = [
-                        '#ff3333',               // 勝利: 赤系統（明るいネオンレッド）
-                        'rgba(0, 255, 255, 0.1)' // 敗北: 青系統（薄い水色）
-                    ]; 
-                    if (win === 0 && loss === 0) { chartData = [1]; chartColors = ['#333']; }
+                    
+                    // ★ネオンカラーの定義（赤をより鮮やかに）
+                    const neonRed = '#ff073a'; 
+                    const neonBlueBg = 'rgba(0, 255, 255, 0.1)'; // 青の背景色（薄い）
+                    const neonBlueBorder = 'rgba(0, 255, 255, 0.5)'; // 青の縁取り色（少し濃く）
+
+                    // ★背景色をパターンにする（赤と青の斜線）
+                    let backgroundColors = [
+                        createDiagonalPattern(neonRed),
+                        createDiagonalPattern(neonBlueBg)
+                    ];
+                    // ★縁取り色を単色のネオンカラーにする
+                    let borderColors = [
+                        neonRed,
+                        neonBlueBorder
+                    ];
+                    // ★縁取りの太さを設定
+                    let borderWidth = 3;
+
+                    if (win === 0 && loss === 0) { 
+                        chartData = [1]; 
+                        backgroundColors = ['#333']; 
+                        borderColors = ['#333'];
+                        borderWidth = 0;
+                    }
 
                     chartInstances.push(new Chart(ctx, {
                         type: 'doughnut',
                         data: { labels: ['Win', 'Loss'], datasets: [{ 
                             data: chartData, 
-                            backgroundColor: chartColors, 
-                            borderWidth: 0,
-                            borderColor: chartColors, // 境界線も同じ色に
+                            backgroundColor: backgroundColors, // ← パターンを指定
+                            borderColor: borderColors,       // ← 単色のネオンカラーを指定
+                            borderWidth: borderWidth,        // ← 太線に設定
                             hoverOffset: 4
                         }] },
                         options: { 
