@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>将棋 通算勝敗表 (診断モード)</title>
+    <title>将棋 通算勝敗表 (日付不要版)</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
@@ -12,20 +12,22 @@
         :root { --bg-color: #121212; --neon-green: #39ff14; --danger-color: #ff3333; }
         body { background-color: var(--bg-color); color: var(--neon-green); font-family: "M PLUS Rounded 1c", sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; padding-bottom: 150px; }
         
-        /* 診断メッセージエリア */
-        #status-board {
-            background: #222; border: 2px solid #fff; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-weight: bold;
-        }
+        /* 診断メッセージ */
+        #status-board { background: #222; border: 2px solid #fff; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-weight: bold; }
         .status-ok { color: var(--neon-green); border-color: var(--neon-green); }
+        .status-warn { color: #ffff00; border-color: #ffff00; }
         .status-error { color: var(--danger-color); border-color: var(--danger-color); background: rgba(255,0,0,0.1); }
 
-        /* 基本スタイル */
+        /* スタイル */
         .card { background: #1e1e1e; padding: 20px; border-radius: 12px; border: 1px solid var(--neon-green); margin-bottom: 20px; }
         h1 { text-align: center; text-shadow: 0 0 10px var(--neon-green); }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #444; padding: 8px; text-align: center; }
         th { background: #000; color: #00ffff; }
         
+        /* バナー */
+        .streak-banner { background: rgba(0,0,0,0.6); border: 1px dashed #ff00ff; color: #ff00ff; padding: 10px; text-align: center; border-radius: 8px; margin-bottom: 20px; font-weight: bold; display: none; }
+
         /* Loading */
         #loading { position: fixed; inset:0; background:#000; display:flex; justify-content:center; align-items:center; z-index:999; font-size:1.5rem;}
     </style>
@@ -38,6 +40,8 @@
 
     <h1>将棋 通算勝敗表</h1>
 
+    <div id="streakBanner" class="streak-banner"></div>
+
     <div class="card">
         <h2>順位表</h2>
         <table>
@@ -47,7 +51,7 @@
     </div>
 
     <div class="card">
-        <h2>対戦履歴 (最新5件)</h2>
+        <h2>対戦履歴 (最新10件)</h2>
         <div id="historyList"></div>
     </div>
 
@@ -62,50 +66,78 @@
             const loading = document.getElementById('loading');
 
             try {
-                // 1. ファイルの存在確認
-                statusBoard.innerHTML = "📡 GitHub上のExcelファイルを探しています...";
+                statusBoard.innerHTML = "📡 Excelファイルを読み込んでいます...";
                 
-                const response = await fetch(EXCEL_FILE_NAME + '?t=' + Date.now()); // キャッシュ完全無視
+                // キャッシュ対策をしてファイル取得
+                const response = await fetch(EXCEL_FILE_NAME + '?t=' + Date.now()); 
                 
                 if (!response.ok) {
-                    throw new Error(`❌ Excelファイルが見つかりません (Error ${response.status})<br>・ファイル名が「shogi_data.xlsx」か確認してください<br>・GitHubのindex.htmlと同じ場所にありますか？`);
+                    throw new Error(`❌ Excelファイルが見つかりません。GitHubに「shogi_data.xlsx」をアップロードしてください。`);
                 }
 
-                // 2. データの解析
                 const arrayBuffer = await response.arrayBuffer();
                 const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
 
-                // 3. シート名の確認
-                if (!wb.Sheets["対戦履歴"]) throw new Error("❌ シート名「対戦履歴」が見つかりません。<br>Excelのシート名を確認してください。");
-                if (!wb.Sheets["参加者リスト"]) throw new Error("❌ シート名「参加者リスト」が見つかりません。");
+                if (!wb.Sheets["対戦履歴"] || !wb.Sheets["参加者リスト"]) {
+                    throw new Error("❌ シート名エラー: 「対戦履歴」または「参加者リスト」という名前のシートがありません。");
+                }
 
                 const jsonPlayers = XLSX.utils.sheet_to_json(wb.Sheets["参加者リスト"]);
                 const jsonMatches = XLSX.utils.sheet_to_json(wb.Sheets["対戦履歴"]);
 
-                // 4. データの中身確認
-                if (jsonPlayers.length === 0) throw new Error("❌ 「参加者リスト」にデータがありません");
-                
-                // データ変換
-                players = jsonPlayers.map(row => ({ id: row["ID"], name: row["名前"] }));
+                // プレイヤー読み込み (空白削除などの調整付き)
+                players = jsonPlayers.map(row => ({ 
+                    id: row["ID"], 
+                    name: String(row["名前"]).trim() 
+                }));
+
+                // ★ここが修正ポイント: 日付がなくても勝者・敗者があれば読み込む★
                 matches = [];
                 let rowCount = 0;
-                jsonMatches.forEach(row => {
-                    const wObj = players.find(p => p.name === row["勝者"]);
-                    const lObj = players.find(p => p.name === row["敗者"]);
+                let skipCount = 0;
+
+                jsonMatches.forEach((row, index) => {
+                    // 名前前後の空白を削除してマッチングさせる
+                    const wName = row["勝者"] ? String(row["勝者"]).trim() : "";
+                    const lName = row["敗者"] ? String(row["敗者"]).trim() : "";
+                    
+                    const wObj = players.find(p => p.name === wName);
+                    const lObj = players.find(p => p.name === lName);
+
                     if (wObj && lObj) {
-                        let ts = row["対戦日"] ? new Date(row["対戦日"]).getTime() : Date.now();
-                        matches.push({ winner: wObj.id, loser: lObj.id, timestamp: ts, _order: rowCount++ });
+                        matches.push({ 
+                            winner: wObj.id, 
+                            loser: lObj.id, 
+                            // 日付がなければ空文字を入れる（エラーにしない）
+                            dateStr: row["対戦日"] || row["日時"] || "-", 
+                            _order: rowCount++ // Excelの行順を記録
+                        });
+                    } else {
+                        // 名前が一致しない、または空欄の行はスキップ
+                        if(wName || lName) {
+                            console.warn(`Skipped row ${index + 2}: ${wName} vs ${lName} (Name mismatch)`);
+                            skipCount++;
+                        }
                     }
                 });
 
-                // 成功！
-                statusBoard.className = "status-ok";
-                statusBoard.innerHTML = `✅ 読み込み成功！<br>・プレイヤー: ${players.length}名<br>・対戦データ: ${matches.length}件<br>・最新データの反映完了`;
+                // ステータス表示
+                if (matches.length > 0) {
+                    let msg = `✅ 読み込み成功！ (全${matches.length}試合)<br>・プレイヤー: ${players.length}名`;
+                    if (skipCount > 0) {
+                        msg += `<br>⚠️ 注意: 名前が一致しないため読み込めなかった行が ${skipCount}件 あります。Excelの名前を確認してください。`;
+                        statusBoard.className = "status-warn";
+                    } else {
+                        statusBoard.className = "status-ok";
+                    }
+                    statusBoard.innerHTML = msg;
+                } else {
+                    throw new Error("❌ データが0件です。Excelの「勝者」「敗者」列に正しい名前が入力されているか確認してください。");
+                }
                 
                 render();
 
             } catch (err) {
-                // エラー発生時
                 statusBoard.className = "status-error";
                 statusBoard.innerHTML = `⚠️ エラー発生: <br>${err.message}`;
                 console.error(err);
@@ -115,29 +147,95 @@
         }
 
         function render() {
-            // 集計
-            let stats = players.map(p => ({ id: p.id, name: p.name, wins: 0, losses: 0, total: 0 }));
+            // 集計データの初期化
+            let stats = players.map(p => ({ 
+                id: p.id, name: p.name, wins: 0, losses: 0, total: 0, currentStreak: 0 
+            }));
+
+            // Excelの行順(_order)通りにループして連勝計算
+            matches.sort((a, b) => a._order - b._order);
+
             matches.forEach(m => {
-                stats[m.winner].wins++; stats[m.winner].total++;
-                stats[m.loser].losses++; stats[m.loser].total++;
+                // 勝敗カウント
+                stats[m.winner].wins++;
+                stats[m.winner].total++;
+                stats[m.loser].losses++;
+                stats[m.loser].total++;
+
+                // 連勝計算
+                // 勝者: 負け越し中なら1(連勝開始)、そうでないなら+1
+                if (stats[m.winner].currentStreak < 0) stats[m.winner].currentStreak = 1;
+                else stats[m.winner].currentStreak++;
+
+                // 敗者: 勝ち越し中なら-1(連敗開始)、そうでないなら-1
+                if (stats[m.loser].currentStreak > 0) stats[m.loser].currentStreak = -1;
+                else stats[m.loser].currentStreak--;
             });
-            // ランキング
-            stats.sort((a, b) => b.wins - a.wins);
+
+            // バナー更新
+            updateBanner(stats);
+
+            // 順位表更新
             const tbody = document.getElementById('rankingBody');
             tbody.innerHTML = "";
-            stats.forEach((s, i) => {
-                const rate = s.total ? (s.wins/s.total*100).toFixed(1) : 0;
-                tbody.innerHTML += `<tr><td>${i+1}</td><td>${s.name}</td><td>${s.wins}-${s.losses}</td><td>${rate}%</td><td>${s.total}</td></tr>`;
+            // 勝ち数順にソートして表示
+            let rankStats = [...stats].sort((a, b) => b.wins - a.wins);
+            
+            rankStats.forEach((s, i) => {
+                const rate = s.total ? (s.wins / s.total * 100).toFixed(1) : 0;
+                let streakText = "";
+                if(s.currentStreak >= 3) streakText = ` <span style="color:#ff00ff">🔥${s.currentStreak}連勝</span>`;
+                else if(s.currentStreak <= -3) streakText = ` <span style="color:#00ffff">☔${Math.abs(s.currentStreak)}連敗</span>`;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${i + 1}</td>
+                        <td style="font-weight:bold">${s.name}${streakText}</td>
+                        <td><span style="color:#ff00ff">${s.wins}</span> - <span style="color:#00ffff">${s.losses}</span></td>
+                        <td>${rate}%</td>
+                        <td>${s.total}</td>
+                    </tr>
+                `;
             });
-            // 履歴
+
+            // 履歴更新（新しい順＝配列の逆順で表示）
             const hList = document.getElementById('historyList');
             hList.innerHTML = "";
-            // Excelの下の行ほど新しいとみなす
-            [...matches].reverse().slice(0, 5).forEach(m => {
+            // 最新10件を表示
+            [...matches].reverse().slice(0, 10).forEach(m => {
                 const w = players.find(p => p.id === m.winner).name;
                 const l = players.find(p => p.id === m.loser).name;
-                hList.innerHTML += `<div style="padding:5px; border-bottom:1px solid #333">○ ${w} vs ● ${l}</div>`;
+                // 日付がある場合は表示、なければ省略
+                const dateDisplay = m.dateStr !== "-" ? `<span style="font-size:0.8rem; color:#888;">(${m.dateStr})</span> ` : "";
+                
+                hList.innerHTML += `
+                    <div style="padding:8px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
+                        <span>${dateDisplay}<span style="color:#ff00ff">○ ${w}</span></span>
+                        <span><span style="color:#00ffff">● ${l}</span></span>
+                    </div>
+                `;
             });
+        }
+
+        function updateBanner(stats) {
+            const banner = document.getElementById('streakBanner');
+            // 3連勝以上の人がいれば表示
+            let topStreak = 0;
+            let topName = "";
+            
+            stats.forEach(s => {
+                if(s.currentStreak >= 3 && s.currentStreak > topStreak) {
+                    topStreak = s.currentStreak;
+                    topName = s.name;
+                }
+            });
+
+            if (topStreak > 0) {
+                banner.style.display = "block";
+                banner.innerHTML = `🔥 現在、${topName} さんが ${topStreak}連勝中！ 誰か止めろ！ 🔥`;
+            } else {
+                banner.style.display = "none";
+            }
         }
     </script>
 </body>
