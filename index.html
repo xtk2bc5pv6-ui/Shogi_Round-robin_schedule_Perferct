@@ -104,4 +104,416 @@
         @media (max-width: 600px) {
             .header-container { flex-direction: column; text-align: center; gap: 10px; }
             .header-left { flex-direction: column; }
-            .charts-container
+            .charts-container { gap: 10px; }
+            .chart-wrapper { min-width: 45%; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <p>LOADING...</p>
+        <p style="font-size:0.8rem; margin-top:10px; color:#888;">データを取得しています</p>
+    </div>
+
+    <header class="header-container">
+        <div class="header-left">
+            <div class="shogi-icon">
+                <svg viewBox="0 0 100 120">
+                    <path d="M50 5 L95 25 L85 115 L15 115 L5 25 Z" stroke-linejoin="round" />
+                    <text x="50" y="80" font-size="50" text-anchor="middle" fill="#39ff14" stroke="none" style="font-family: 'M PLUS Rounded 1c'; font-weight:800;">王</text>
+                </svg>
+            </div>
+            <div class="title-group">
+                <h1>将棋 通算勝敗表</h1>
+                <div class="subtitle">SHOGI BATTLE LOG</div>
+            </div>
+        </div>
+        <div class="last-updated" id="lastUpdatedDisplay">Updating...</div>
+    </header>
+    
+    <div style="text-align:center;">
+        <button onclick="addNewPlayer()" class="add-player-btn">+ 参加者を追加</button>
+    </div>
+    
+    <div id="streakBanner" class="streak-banner"></div>
+
+    <div class="card">
+        <h2>順位表（勝率順）</h2>
+        <div class="table-responsive">
+            <table class="ranking-table">
+                <thead>
+                    <tr>
+                        <th width="10%">順位</th>
+                        <th width="35%">氏名</th>
+                        <th width="20%">勝 - 負</th>
+                        <th width="15%">勝率</th>
+                        <th>試合数</th>
+                    </tr>
+                </thead>
+                <tbody id="rankingBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>対戦スコア表 (勝ち - 負け)</h2>
+        <div class="matrix-scroll">
+            <table class="matrix-table">
+                <thead id="matrixHead"></thead>
+                <tbody id="matrixBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>個人成績分析（対戦相手別勝率）</h2>
+        <div id="statsList" class="stats-grid"></div>
+    </div>
+
+    <div style="text-align:center; color:#666; font-size:0.8rem; margin-top:20px;">
+        ※「shogi_data.xlsx」を読み込んで表示しています。<br>
+        データ更新はExcelファイルを更新してGitHubへアップロードしてください。
+    </div>
+
+    <script>
+        let players = []; // { id, name, normalizedName }
+        let matches = []; 
+        let lastUpdated = ""; 
+        let chartInstances = [];
+        const EXCEL_FILE_NAME = './shogi_data.xlsx';
+
+        /**
+         * 名前のスペースを削除し、統一したキー（正規化名）を作成する
+         * @param {string} name - プレイヤー名
+         * @returns {string} スペースを除去した名前
+         */
+        function normalizeName(name) {
+            if (!name) return "";
+            // 半角・全角スペースを全て空文字に置換
+            return name.toString().replace(/[\s　]+/g, '');
+        }
+
+        // 起動時処理
+        window.addEventListener('DOMContentLoaded', async () => {
+            await init();
+            
+            // 安全装置：3秒経ってもLoadingが消えなければ強制的に消す
+            setTimeout(() => {
+                const loader = document.getElementById('loading-screen');
+                if(loader && loader.style.display !== 'none') {
+                    // 強制的に解除
+                    loader.style.transition = 'none';
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.style.display = 'none', 100);
+                }
+            }, 3000);
+        });
+
+        async function init() {
+            try {
+                // 1. サーバー(GitHub)からExcelファイルを探す
+                const response = await fetch(EXCEL_FILE_NAME + '?v=' + new Date().getTime());
+                
+                if (response.ok) {
+                    const arrayBuffer = await response.arrayBuffer();
+                    parseExcel(arrayBuffer);
+                    
+                    const lastMod = response.headers.get('Last-Modified');
+                    if (lastMod) {
+                        const date = new Date(lastMod);
+                        lastUpdated = date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    } else {
+                        lastUpdated = "Excel File Loaded";
+                    }
+                } else {
+                    console.warn("Excel file not found. Loading preset data.");
+                    loadPresetData();
+                    lastUpdated = "Initial Data Mode";
+                }
+            } catch (e) {
+                console.error("Fetch failed:", e);
+                loadPresetData();
+                lastUpdated = "Offline Mode";
+            } finally {
+                // 描画実行
+                renderAll();
+                
+                // 【画面が真っ暗になる問題を修正するための強制解除処理】
+                const loader = document.getElementById('loading-screen');
+                if(loader) {
+                    // トランジションを無効化し、即座に画面を明るくする
+                    loader.style.transition = 'none'; 
+                    loader.style.opacity = '0';
+                    // 0.1秒後に完全に display: none にする
+                    setTimeout(() => {
+                        loader.style.display = 'none';
+                    }, 100); 
+                }
+            }
+        }
+
+        // Excelデータの解析
+        function parseExcel(arrayBuffer) {
+            try {
+                const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+                
+                const sheetMatches = wb.Sheets["対戦履歴"];
+                const sheetPlayers = wb.Sheets["参加者リスト"];
+
+                if (!sheetMatches || !sheetPlayers) throw new Error("Missing sheets");
+
+                const jsonPlayers = XLSX.utils.sheet_to_json(sheetPlayers);
+                const jsonMatches = XLSX.utils.sheet_to_json(sheetMatches);
+
+                // プレイヤー読み込み (正規化名を追加)
+                players = jsonPlayers.map(row => ({
+                    id: row["ID"],
+                    name: row["名前"],
+                    normalizedName: normalizeName(row["名前"]) // <-- 正規化名
+                }));
+
+                // 対戦結果読み込み (正規化名でマッチング)
+                matches = [];
+                jsonMatches.forEach(row => {
+                    // Excelの勝者・敗者の名前を正規化
+                    const wNameNormalized = normalizeName(row["勝者"]);
+                    const lNameNormalized = normalizeName(row["敗者"]);
+                    
+                    // 正規化名でプレイヤーを探す
+                    const wObj = players.find(p => p.normalizedName === wNameNormalized);
+                    const lObj = players.find(p => p.normalizedName === lNameNormalized);
+                    
+                    if(wObj && lObj) {
+                        matches.push({
+                            winner: wObj.id,
+                            loser: lObj.id,
+                            timestamp: row["対戦日"] ? new Date(row["対戦日"]).getTime() : Date.now()
+                        });
+                    } else {
+                        // マッチングできなかったログ
+                        console.warn(`Match skipped: Winner: ${row["勝者"]} (Normalized: ${wNameNormalized}), Loser: ${row["敗者"]} (Normalized: ${lNameNormalized}) - Player not found.`);
+                    }
+                });
+            } catch(e) {
+                console.error("Excel parse error:", e);
+                loadPresetData();
+            }
+        }
+
+        // 初期データ（フォールバック用）
+        function loadPresetData() {
+            players = [
+                { id: 0, name: '吉谷 悠', normalizedName: '吉谷悠' },
+                { id: 1, name: '石井山 拓登', normalizedName: '石井山拓登' },
+                { id: 2, name: '森岡 凜太郎', normalizedName: '森岡凜太郎' }
+            ];
+            matches = [];
+            
+            for(let i=0; i<6; i++) {
+                matches.push({ winner: 0, loser: 1, timestamp: Date.now() });
+                matches.push({ winner: 1, loser: 0, timestamp: Date.now() });
+            }
+            for(let i=0; i<6; i++) {
+                matches.push({ winner: 0, loser: 2, timestamp: Date.now() });
+                matches.push({ winner: 2, loser: 0, timestamp: Date.now() });
+            }
+            for(let i=0; i<4; i++) {
+                matches.push({ winner: 1, loser: 2, timestamp: Date.now() });
+                matches.push({ winner: 2, loser: 1, timestamp: Date.now() });
+            }
+        }
+
+        /**
+         * 新しい参加者を追加する機能
+         * ※セッション中のみ有効（リロードでExcelデータに戻ります）
+         */
+        function addNewPlayer() {
+            let newName = prompt("新しい参加者の名前を入力してください:");
+            if (newName) {
+                const cleanName = normalizeName(newName);
+                
+                if (cleanName.length === 0) {
+                    alert("名前が入力されていません。");
+                    return;
+                }
+                
+                // 既存の正規化名リストをチェックして重複を避ける
+                const existingNormalizedNames = players.map(p => p.normalizedName);
+
+                if (existingNormalizedNames.includes(cleanName)) {
+                    alert(`「${newName}」さんは既に登録されています。（登録名: ${players.find(p => p.normalizedName === cleanName).name}）`);
+                    return;
+                }
+
+                const newId = players.length > 0 ? Math.max(...players.map(p => p.id)) + 1 : 0;
+                
+                // players配列に新しい参加者を追加
+                players.push({
+                    id: newId,
+                    name: newName.trim(), // 表示用の名前は元のまま（ただし端のスペースは削除）
+                    normalizedName: cleanName // 判定用の名前はスペースなし
+                });
+                
+                // 集計と描画を再実行
+                calculateAndRender();
+                alert(`「${newName.trim()}」さんを一時的に追加しました。\n(※リロードでExcelデータに戻ります)`);
+            }
+        }
+
+        function renderAll() {
+            calculateAndRender();
+            renderLastUpdated();
+        }
+
+        function calculateAndRender() {
+            // 集計処理
+            let stats = players.map(p => ({
+                id: p.id, name: p.name, wins: 0, losses: 0, total: 0, vs: Array(players.length).fill(0), currentStreak: 0
+            }));
+
+            const idMap = new Map(players.map((p, index) => [p.id, index]));
+            
+            let sortedMatches = [...matches].sort((a, b) => a.timestamp - b.timestamp);
+
+            sortedMatches.forEach(m => {
+                const winnerIndex = idMap.get(m.winner);
+                const loserIndex = idMap.get(m.loser);
+
+                if (winnerIndex === undefined || loserIndex === undefined) return;
+
+                stats[winnerIndex].wins++; stats[winnerIndex].total++; 
+                stats[winnerIndex].vs[loserIndex]++; 
+                stats[loserIndex].losses++; stats[loserIndex].total++;
+
+                if (stats[winnerIndex].currentStreak < 0) stats[winnerIndex].currentStreak = 1; else stats[winnerIndex].currentStreak++;
+                if (stats[loserIndex].currentStreak > 0) stats[loserIndex].currentStreak = -1; else stats[loserIndex].currentStreak--;
+            });
+
+            // バナー表示
+            const banner = document.getElementById('streakBanner');
+            let topStreak = 0; let topStreakerName = "";
+            stats.forEach(s => {
+                if (s.currentStreak >= 3 && s.currentStreak > topStreak) { topStreak = s.currentStreak; topStreakerName = s.name; }
+            });
+            if (banner) {
+                if (topStreak > 0) {
+                    banner.style.display = "block";
+                    banner.innerHTML = `🔥 現在 ${topStreakerName} さんが ${topStreak}連勝中！ 誰か止めろ！ 🔥`;
+                } else { banner.style.display = "none"; }
+            }
+
+            // ランキング表
+            let ranking = [...stats].sort((a, b) => {
+                const rateA = a.total ? a.wins / a.total : 0; const rateB = b.total ? b.wins / b.total : 0;
+                if (rateB !== rateA) return rateB - rateA; return b.wins - a.wins;
+            });
+
+            const rBody = document.getElementById('rankingBody');
+            if(rBody) {
+                rBody.innerHTML = '';
+                ranking.forEach((s, i) => {
+                    const tr = document.createElement('tr');
+                    let nameHtml = s.name; let badges = "";
+                    if (i === 0 && s.total > 0) { tr.classList.add('rank-1'); badges += `<span class="badge badge-crown">👑</span>`; }
+                    if (s.currentStreak >= 3) badges += `<span class="badge badge-fire">🔥 ${s.currentStreak}連勝</span>`;
+                    if (s.currentStreak <= -3) badges += `<span class="badge badge-rain">☔ ${Math.abs(s.currentStreak)}連敗</span>`;
+                    if (badges) nameHtml += `<br>${badges}`;
+                    const rate = s.total ? (s.wins / s.total * 100).toFixed(1) : "0.0";
+                    tr.innerHTML = `<td style="font-weight:bold; color:var(--neon-blue)">${i + 1}</td><td style="font-weight:bold; font-size:1.1rem; line-height:1.4;">${nameHtml}</td><td><span class="score-win">${s.wins}</span> - <span class="score-loss">${s.losses}</span></td><td>${rate}%</td><td>${s.total}</td>`;
+                    rBody.appendChild(tr);
+                });
+            }
+
+            // マトリクス表
+            const mHead = document.getElementById('matrixHead'); const mBody = document.getElementById('matrixBody');
+            if(mHead && mBody) {
+                let hHtml = '<tr><th></th>'; players.forEach(p => hHtml += `<th>${p.name}</th>`); hHtml += '</tr>'; mHead.innerHTML = hHtml;
+                mBody.innerHTML = '';
+                stats.forEach((rowP, i) => { 
+                   const tr = document.createElement('tr'); let rowHtml = `<th>${rowP.name}</th>`;
+                    stats.forEach((colP, j) => {
+                        if (i === j) rowHtml += '<td class="diagonal-cell"></td>';
+                        else {
+                            const wins = stats[i].vs[j]; 
+                            const losses = stats[j].vs[i]; 
+                            let content = '-'; if (wins > 0 || losses > 0) content = `<span class="score-win">${wins}</span> - <span class="score-loss">${losses}</span>`;
+                            rowHtml += `<td class="score-cell">${content}</td>`;
+                        }
+                    });
+                    tr.innerHTML = rowHtml; mBody.appendChild(tr);
+                });
+            }
+            
+            // グラフ
+            renderCharts(stats);
+        }
+
+        function renderCharts(statsData) {
+            const container = document.getElementById('statsList');
+            if(!container) return;
+            chartInstances.forEach(c => c.destroy()); chartInstances = []; container.innerHTML = '';
+            
+            statsData.forEach((p, pIndex) => { 
+                const card = document.createElement('div'); card.className = 'stats-card';
+                const opponents = players.filter(opp => opp.id !== p.id);
+                let chartsHtml = `<div class="charts-container">`;
+                
+                opponents.forEach(opp => {
+                    const canvasId = `chart-${p.id}-vs-${opp.id}`;
+                    const oppIndex = statsData.findIndex(s => s.id === opp.id);
+                    const win = p.vs[oppIndex];
+                    const loss = statsData[oppIndex].vs[pIndex];
+                    
+                    chartsHtml += `
+                        <div class="chart-wrapper">
+                            <div class="chart-title">vs ${opp.name}</div>
+                            <div style="height:140px;"><canvas id="${canvasId}"></canvas></div>
+                            <div class="chart-score"><span class="score-win">${win}勝</span> - <span class="score-loss">${loss}敗</span></div>
+                        </div>`;
+                });
+                chartsHtml += `</div>`;
+                card.innerHTML = `<div class="stats-header">${p.name}</div>` + chartsHtml;
+                container.appendChild(card);
+
+                opponents.forEach(opp => {
+                    const canvasId = `chart-${p.id}-vs-${opp.id}`;
+                    const ctx = document.getElementById(canvasId).getContext('2d');
+                    const oppIndex = statsData.findIndex(s => s.id === opp.id);
+                    const win = p.vs[oppIndex];
+                    const loss = statsData[oppIndex].vs[pIndex];
+                    
+                    let chartData = [win, loss];
+                    // 勝利は目立つピンク、敗北は薄いグレー
+                    let chartColors = ['var(--neon-pink)', 'rgba(255, 255, 255, 0.1)']; 
+                    if (win === 0 && loss === 0) { chartData = [1]; chartColors = ['#333']; }
+
+                    chartInstances.push(new Chart(ctx, {
+                        type: 'doughnut',
+                        data: { labels: ['Win', 'Loss'], datasets: [{ 
+                            data: chartData, 
+                            backgroundColor: chartColors, 
+                            borderWidth: 0,
+                            borderColor: chartColors,
+                            hoverOffset: 4
+                        }] },
+                        options: { 
+                            responsive: true, maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { display: false }, 
+                                tooltip: { enabled: (win > 0 || loss > 0) } 
+                            } 
+                        }
+                    }));
+                });
+            });
+        }
+
+        function renderLastUpdated() {
+            const el = document.getElementById('lastUpdatedDisplay');
+            if(el) el.innerText = `Last Updated: ${lastUpdated}`;
+        }
+    </script>
+</body>
+
+</html>
