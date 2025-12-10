@@ -1,111 +1,289 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>将棋 通算勝敗表</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-0.19.3/package/dist/xlsx.full.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
-    
-    <style>
-        :root { --bg-color: #121212; --neon-green: #39ff14; --danger-color: #ff3333; }
-        body { background-color: var(--bg-color); color: var(--neon-green); font-family: "M PLUS Rounded 1c", sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; padding-bottom: 150px; }
-        
-        /* 診断メッセージ */
-        #status-board { background: #222; border: 2px solid #fff; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-weight: bold; line-height: 1.6; }
-        .status-ok { color: var(--neon-green); border-color: var(--neon-green); }
-        .status-warn { color: #ffff00; border-color: #ffff00; }
-        .status-error { color: var(--danger-color); border-color: var(--danger-color); background: rgba(255,0,0,0.1); }
-        .error-detail { font-size: 0.9rem; color: #ff9999; margin-left: 15px; font-weight: normal; }
-
-        /* スタイル */
-        .card { background: #1e1e1e; padding: 20px; border-radius: 12px; border: 1px solid var(--neon-green); margin-bottom: 20px; }
-        h1 { text-align: center; text-shadow: 0 0 10px var(--neon-green); }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #444; padding: 8px; text-align: center; }
-        th { background: #000; color: #00ffff; }
-        
-        /* Loading */
-        #loading { position: fixed; inset:0; background:#000; display:flex; justify-content:center; align-items:center; z-index:999; font-size:1.5rem;}
-        
-        /* バナー */
-        .streak-banner { background: rgba(0,0,0,0.6); border: 1px dashed #ff00ff; color: #ff00ff; padding: 10px; text-align: center; border-radius: 8px; margin-bottom: 20px; font-weight: bold; display: none; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>将棋対戦成績管理</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+    body { font-family: sans-serif; padding: 20px; }
+    .input-area, .table-area, .chart-area { margin-bottom: 30px; padding: 20px; border: 1px solid #ccc; border-radius: 8px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #999; padding: 8px; text-align: center; }
+    th { background-color: #f0f0f0; }
+    .win { color: red; font-weight: bold; }
+    .loss { color: blue; }
+    select, button { padding: 8px 12px; font-size: 16px; }
+    /* 円グラフのサイズ調整 */
+    .chart-container { width: 30%; display: inline-block; margin: 1%; }
+    @media (max-width: 600px) { .chart-container { width: 90%; display: block; margin: 10px auto; } }
+    /* 追加ボタンのスタイル */
+    .add-player-btn { background-color: #4CAF50; color: white; border: none; margin-left: 20px; cursor: pointer;}
+    .add-player-btn:hover { background-color: #45a049; }
+</style>
 </head>
 <body>
 
-    <div id="loading">データ読み込み中...</div>
+<h1>将棋対戦成績管理</h1>
 
-    <div id="status-board">ステータス確認中...</div>
+<div class="input-area">
+    <h2>結果入力</h2>
+    <select id="winner"></select> が
+    <select id="loser"></select> に勝利
+    <button onclick="recordResult()">結果を記録</button>
+    <button onclick="addNewPlayer()" class="add-player-btn">＋ 参加者を追加</button>
+</div>
 
-    <h1>将棋 通算勝敗表</h1>
-
-    <div id="streakBanner" class="streak-banner"></div>
-
-    <div class="card">
-        <h2>順位表</h2>
-        <table>
-            <thead><tr><th>順位</th><th>氏名</th><th>勝 - 負</th><th>勝率</th><th>試合数</th></tr></thead>
-            <tbody id="rankingBody"></tbody>
+<div class="table-area">
+    <h2>勝敗表</h2>
+    <table id="scoreTable">
         </table>
-    </div>
+</div>
 
-    <div class="card">
-        <h2>対戦履歴 (最新10件)</h2>
-        <div id="historyList"></div>
-    </div>
+<div class="chart-area">
+    <h2>相手別勝率（勝利を強調）</h2>
+    <div id="chartsContainer">
+        </div>
+</div>
 
-    <script>
-        const EXCEL_FILE_NAME = './shogi_data.xlsx'; 
-        let players = [], matches = [];
+<script>
+    // --- 初期設定 ---
+    // 参加者リスト（スペースなし）
+    let players = ['Aさん', 'Bさん', 'Cさん'];
+    
+    // 対戦結果を保存するオブジェクト
+    // 例: results['Aさん']['Bさん'] = {win: 2, loss: 1} (AさんはBさんに2勝1敗)
+    let results = {};
 
-        window.addEventListener('DOMContentLoaded', init);
+    // Chart.jsのインスタンスを保持する配列
+    let chartInstances = [];
 
-        async function init() {
-            const statusBoard = document.getElementById('status-board');
-            const loading = document.getElementById('loading');
-
-            try {
-                statusBoard.innerHTML = "📡 Excelファイルを読み込んでいます...";
-                
-                const response = await fetch(EXCEL_FILE_NAME + '?t=' + Date.now()); 
-                
-                if (!response.ok) {
-                    throw new Error(`❌ Excelファイルが見つかりません。GitHubにアップロードしてください。`);
+    // --- データ初期化関数 ---
+    function initializeData() {
+        results = {};
+        players.forEach(p1 => {
+            results[p1] = {};
+            players.forEach(p2 => {
+                if (p1 !== p2) {
+                    results[p1][p2] = { win: 0, loss: 0 };
                 }
+            });
+        });
+    }
 
-                const arrayBuffer = await response.arrayBuffer();
-                const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+    // --- 画面描画初期化関数 ---
+    function initializeUI() {
+        updateDropdowns();
+        updateTable();
+        createCharts();
+    }
+    
+    // ページ読み込み時に実行
+    initializeData();
+    initializeUI();
 
-                if (!wb.Sheets["対戦履歴"] || !wb.Sheets["参加者リスト"]) {
-                    throw new Error("❌ シート名エラー: シート名を確認してください。");
+
+    // --- 機能関数 ---
+
+    // プルダウンメニューを更新する
+    function updateDropdowns() {
+        const winnerSelect = document.getElementById('winner');
+        const loserSelect = document.getElementById('loser');
+        winnerSelect.innerHTML = '';
+        loserSelect.innerHTML = '';
+
+        players.forEach(player => {
+            let optionW = document.createElement('option');
+            optionW.value = player;
+            optionW.text = player;
+            winnerSelect.appendChild(optionW);
+
+            let optionL = document.createElement('option');
+            optionL.value = player;
+            optionL.text = player;
+            loserSelect.appendChild(optionL);
+        });
+        // 初期選択をずらす
+        if (players.length > 1) {
+             loserSelect.selectedIndex = 1;
+        }
+    }
+
+    // 新しい参加者を追加する機能
+    function addNewPlayer() {
+        // 名前を入力させるプロンプトを表示
+        let newName = prompt("新しい参加者の名前を入力してください:\n(※ページを更新するとリセットされます)");
+        
+        if (newName) {
+            // 入力された名前からスペースを全て削除
+            newName = newName.replace(/\s+/g, '');
+
+            // 空文字でなく、かつ既存のリストに存在しない場合のみ追加
+            if (newName && !players.includes(newName)) {
+                // リストに追加
+                players.push(newName);
+                // データを再初期化（新しい人を含めるため）
+                initializeData();
+                // 画面を再描画
+                initializeUI();
+                alert(`${newName} を追加しました。`);
+            } else if (players.includes(newName)) {
+                 alert("その名前は既に存在します。");
+            }
+        }
+    }
+
+    // 結果を記録する
+    function recordResult() {
+        const winner = document.getElementById('winner').value;
+        const loser = document.getElementById('loser').value;
+
+        if (winner === loser) {
+            alert("勝者と敗者が同じです。別の対戦相手を選んでください。");
+            return;
+        }
+
+        // 結果を集計データに加算
+        results[winner][loser].win += 1;
+        results[loser][winner].loss += 1;
+
+        // 表示を更新
+        updateTable();
+        updateCharts();
+        alert(`${winner} の勝利を記録しました。`);
+    }
+
+    // 勝敗表を更新する
+    function updateTable() {
+        const table = document.getElementById('scoreTable');
+        table.innerHTML = ''; // 一旦クリア
+
+        // ヘッダー行の作成
+        let thead = table.createTHead();
+        let headerRow = thead.insertRow();
+        let th0 = document.createElement('th');
+        th0.textContent = '＼'; // 左上隅
+        headerRow.appendChild(th0);
+        
+        players.forEach(player => {
+            let th = document.createElement('th');
+            th.textContent = player;
+            headerRow.appendChild(th);
+        });
+        let thTotal = document.createElement('th');
+        thTotal.textContent = '通算勝敗';
+        headerRow.appendChild(thTotal);
+
+        // データ行の作成
+        let tbody = table.createTBody();
+        players.forEach(p1 => {
+            let row = tbody.insertRow();
+            // 行の見出し（自分の名前）
+            let thCell = document.createElement('th');
+            thCell.textContent = p1;
+            row.appendChild(thCell);
+
+            let totalWins = 0;
+            let totalLosses = 0;
+
+            // 各相手との対戦結果セル
+            players.forEach(p2 => {
+                let cell = row.insertCell();
+                if (p1 === p2) {
+                    cell.textContent = 'ー';
+                    cell.style.backgroundColor = "#e9e9e9";
+                } else {
+                    const res = results[p1][p2];
+                    cell.innerHTML = `<span class="win">${res.win}勝</span> - <span class="loss">${res.loss}敗</span>`;
+                    totalWins += res.win;
+                    totalLosses += res.loss;
                 }
+            });
 
-                const jsonPlayers = XLSX.utils.sheet_to_json(wb.Sheets["参加者リスト"]);
-                const jsonMatches = XLSX.utils.sheet_to_json(wb.Sheets["対戦履歴"]);
+            // 通算勝敗セル
+            let totalCell = row.insertCell();
+            totalCell.innerHTML = `<b>${totalWins}勝${totalLosses}敗</b>`;
+        });
+    }
 
-                // ★最強の正規化関数: あらゆる空白（全角・半角・タブなど）を抹消して比較する★
-                const cleanName = (name) => {
-                    if (!name) return "";
-                    // 正規表現 \s はあらゆる空白文字、　は全角スペース。これらを全て空文字に置換
-                    return String(name).replace(/[\s　]+/g, ""); 
-                };
+    // 円グラフを作成・初期化する
+    function createCharts() {
+        const container = document.getElementById('chartsContainer');
+        container.innerHTML = ''; // 既存のグラフをクリア
+        chartInstances = []; // インスタンス保持配列もクリア
 
-                // プレイヤー読み込み
-                players = jsonPlayers.map(row => ({ 
-                    id: row["ID"], 
-                    displayName: row["名前"], // 表示用（スペース入りでもOK）
-                    searchName: cleanName(row["名前"]) // 検索用（スペースなし）
-                }));
+        players.forEach((subjectPlayer, index) => {
+            // グラフを表示するコンテナブロックを作成
+            let chartDiv = document.createElement('div');
+            chartDiv.className = 'chart-container';
+            chartDiv.innerHTML = `<h3>${subjectPlayer} の勝率</h3><canvas id="chart${index}"></canvas>`;
+            container.appendChild(chartDiv);
 
-                matches = [];
-                let rowCount = 0;
-                let errorDetails = [];
+            const ctx = document.getElementById(`chart${index}`).getContext('2d');
+            
+            // Chart.jsで円グラフを作成
+            let chart = new Chart(ctx, {
+                type: 'doughnut', // ドーナツグラフ（pieに変更で通常の円グラフ）
+                data: {
+                    labels: ['勝利', '敗北'],
+                    datasets: [{
+                        data: [0, 0], // 初期値
+                        // --- ここで色を指定します ---
+                        backgroundColor: [
+                            'rgba(255, 159, 64, 1)', // 勝利: 明るいオレンジ (不透明で強調)
+                            'rgba(200, 200, 200, 0.3)' // 敗北: 薄いグレー (透明度を上げて目立たなくする)
+                        ],
+                        borderColor: [
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(220, 220, 220, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) { label += ': '; }
+                                    let value = context.parsed;
+                                    let total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    let percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}${value}回 (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            chartInstances.push(chart); // インスタンスを保存
+        });
+    }
 
-                jsonMatches.forEach((row, index) => {
-                    // Excelの入力値もスペースを削除して検索
-                    const wSearch = cleanName(row["勝者"]);
-                    const lSearch = cleanName(row["敗者"]);
-                    
-                    const wObj = players.find(p => p.
+    // 円グラフのデータを更新する
+    function updateCharts() {
+        players.forEach((subjectPlayer, index) => {
+            let totalWins = 0;
+            let totalLosses = 0;
+
+            players.forEach(opponent => {
+                if (subjectPlayer !== opponent) {
+                    totalWins += results[subjectPlayer][opponent].win;
+                    totalLosses += results[subjectPlayer][opponent].loss;
+                }
+            });
+
+            // 保存してあるチャートインスタンスのデータを更新
+            if (chartInstances[index]) {
+                chartInstances[index].data.datasets[0].data = [totalWins, totalLosses];
+                chartInstances[index].update(); // グラフを再描画
+            }
+        });
+    }
+</script>
+
+</body>
+</html>
