@@ -43,7 +43,7 @@
             color: #888; 
             text-align: right; 
             align-self: flex-end; 
-            text-shadow: none; /* 日付は見やすくするためネオン効果を消す */
+            text-shadow: none; 
         }
 
         /* カード */
@@ -183,29 +183,22 @@
     </div>
 
     <script>
-        let players = []; // { id, name, normalizedName }
+        let players = []; 
         let matches = []; 
         let lastUpdated = ""; 
         let chartInstances = [];
         const EXCEL_FILE_NAME = './shogi_data.xlsx';
 
-        /**
-         * 名前のスペースを削除し、統一したキー（正規化名）を作成する
-         */
         function normalizeName(name) {
             if (!name) return "";
             return name.toString().replace(/[\s　]+/g, '');
         }
 
-        // 起動時処理
         window.addEventListener('DOMContentLoaded', async () => {
             await init();
-            
-            // 安全装置：3秒経ってもLoadingが消えなければ強制的に消す
             setTimeout(() => {
                 const loader = document.getElementById('loading-screen');
                 if(loader && loader.style.display !== 'none') {
-                    // 強制的に解除
                     loader.style.transition = 'none';
                     loader.style.opacity = '0';
                     setTimeout(() => loader.style.display = 'none', 100);
@@ -214,26 +207,21 @@
         });
 
         async function init() {
-            // Last-Modifiedヘッダーを取得するためのFetchを試行
-            let excelResponse;
             try {
-                // キャッシュ回避のため、時間をパラメータに付与し、Excelファイルにアクセス
-                excelResponse = await fetch(EXCEL_FILE_NAME + '?v=' + new Date().getTime());
+                const excelResponse = await fetch(EXCEL_FILE_NAME + '?v=' + new Date().getTime());
                 
                 if (excelResponse.ok) {
-                    // 1. Last-Modifiedヘッダーから日時を取得し、更新
                     const lastMod = excelResponse.headers.get('Last-Modified');
                     if (lastMod) {
                         const date = new Date(lastMod);
                         lastUpdated = date.toLocaleString('ja-JP', { 
                             year: 'numeric', month: '2-digit', day: '2-digit', 
                             hour: '2-digit', minute: '2-digit', second: '2-digit' 
-                        }); // 秒まで表示
+                        });
                     } else {
                         lastUpdated = "Excel File Loaded (Time unknown)";
                     }
 
-                    // 2. ファイルを読み込み、解析
                     const arrayBuffer = await excelResponse.arrayBuffer();
                     parseExcel(arrayBuffer);
                 } else {
@@ -246,10 +234,7 @@
                 loadPresetData();
                 lastUpdated = "Offline Mode";
             } finally {
-                // 描画実行
                 renderAll();
-                
-                // ローディング画面の強制解除処理
                 const loader = document.getElementById('loading-screen');
                 if(loader) {
                     loader.style.transition = 'none'; 
@@ -261,11 +246,9 @@
             }
         }
 
-        // Excelデータの解析
         function parseExcel(arrayBuffer) {
             try {
                 const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
-                
                 const sheetMatches = wb.Sheets["対戦履歴"];
                 const sheetPlayers = wb.Sheets["参加者リスト"];
 
@@ -274,14 +257,12 @@
                 const jsonPlayers = XLSX.utils.sheet_to_json(sheetPlayers);
                 const jsonMatches = XLSX.utils.sheet_to_json(sheetMatches);
 
-                // プレイヤー読み込み (正規化名を追加)
                 players = jsonPlayers.map(row => ({
                     id: row["ID"],
                     name: row["名前"],
                     normalizedName: normalizeName(row["名前"])
                 }));
 
-                // 対戦結果読み込み (正規化名でマッチング)
                 matches = [];
                 jsonMatches.forEach(row => {
                     const wNameNormalized = normalizeName(row["勝者"]);
@@ -306,7 +287,6 @@
             }
         }
 
-        // 初期データ（フォールバック用）
         function loadPresetData() {
             players = [
                 { id: 0, name: '吉谷 悠', normalizedName: '吉谷悠' },
@@ -314,7 +294,6 @@
                 { id: 2, name: '森岡 凜太郎', normalizedName: '森岡凜太郎' }
             ];
             matches = [];
-            
             for(let i=0; i<6; i++) {
                 matches.push({ winner: 0, loser: 1, timestamp: Date.now() });
                 matches.push({ winner: 1, loser: 0, timestamp: Date.now() });
@@ -329,9 +308,6 @@
             }
         }
 
-        /**
-         * 新しい参加者を追加する機能
-         */
         function addNewPlayer() {
             let newName = prompt("新しい参加者の名前を入力してください:");
             if (newName) {
@@ -373,13 +349,11 @@
             }));
 
             const idMap = new Map(players.map((p, index) => [p.id, index]));
-            
             let sortedMatches = [...matches].sort((a, b) => a.timestamp - b.timestamp);
 
             sortedMatches.forEach(m => {
                 const winnerIndex = idMap.get(m.winner);
                 const loserIndex = idMap.get(m.loser);
-
                 if (winnerIndex === undefined || loserIndex === undefined) return;
 
                 stats[winnerIndex].wins++; stats[winnerIndex].total++; 
@@ -390,7 +364,6 @@
                 if (stats[loserIndex].currentStreak > 0) stats[loserIndex].currentStreak = -1; else stats[loserIndex].currentStreak--;
             });
 
-            // バナー表示
             const banner = document.getElementById('streakBanner');
             let topStreak = 0; let topStreakerName = "";
             stats.forEach(s => {
@@ -403,7 +376,6 @@
                 } else { banner.style.display = "none"; }
             }
 
-            // ランキング表
             let ranking = [...stats].sort((a, b) => {
                 const rateA = a.total ? a.wins / a.total : 0; const rateB = b.total ? b.wins / b.total : 0;
                 if (rateB !== rateA) return rateB - rateA; return b.wins - a.wins;
@@ -425,7 +397,6 @@
                 });
             }
 
-            // マトリクス表
             const mHead = document.getElementById('matrixHead'); const mBody = document.getElementById('matrixBody');
             if(mHead && mBody) {
                 let hHtml = '<tr><th></th>'; players.forEach(p => hHtml += `<th>${p.name}</th>`); hHtml += '</tr>'; mHead.innerHTML = hHtml;
@@ -435,8 +406,7 @@
                     stats.forEach((colP, j) => {
                         if (i === j) rowHtml += '<td class="diagonal-cell"></td>';
                         else {
-                            const wins = stats[i].vs[j]; 
-                            const losses = stats[j].vs[i]; 
+                            const wins = stats[i].vs[j]; const losses = stats[j].vs[i]; 
                             let content = '-'; if (wins > 0 || losses > 0) content = `<span class="score-win">${wins}</span> - <span class="score-loss">${losses}</span>`;
                             rowHtml += `<td class="score-cell">${content}</td>`;
                         }
@@ -445,7 +415,6 @@
                 });
             }
             
-            // グラフ
             renderCharts(stats);
         }
 
@@ -461,15 +430,10 @@
                 
                 opponents.forEach(opp => {
                     const canvasId = `chart-${p.id}-vs-${opp.id}`;
-                    const oppIndex = statsData.findIndex(s => s.id === opp.id);
-                    const win = p.vs[oppIndex];
-                    const loss = statsData[oppIndex].vs[pIndex];
-                    
                     chartsHtml += `
                         <div class="chart-wrapper">
                             <div class="chart-title">vs ${opp.name}</div>
                             <div style="height:140px;"><canvas id="${canvasId}"></canvas></div>
-                            <div class="chart-score"><span class="score-win">${win}勝</span> - <span class="score-loss">${loss}敗</span></div>
                         </div>`;
                 });
                 chartsHtml += `</div>`;
@@ -484,10 +448,10 @@
                     const loss = statsData[oppIndex].vs[pIndex];
                     
                     let chartData = [win, loss];
-                    // ★円グラフの配色修正: 勝利はピンク、敗北は青系統の薄い色
+                    // 【修正箇所】変数ではなく直接カラーコードを指定
                     let chartColors = [
-                        'var(--neon-pink)', // 勝利: 明るいネオンピンク
-                        'rgba(0, 255, 255, 0.2)' // 敗北: 青系統（ネオンブルー）の透明度の高い薄い色
+                        '#ff3333',               // 勝利: 赤系統（明るいネオンレッド）
+                        'rgba(0, 255, 255, 0.1)' // 敗北: 青系統（薄い水色）
                     ]; 
                     if (win === 0 && loss === 0) { chartData = [1]; chartColors = ['#333']; }
 
@@ -497,7 +461,7 @@
                             data: chartData, 
                             backgroundColor: chartColors, 
                             borderWidth: 0,
-                            borderColor: chartColors,
+                            borderColor: chartColors, // 境界線も同じ色に
                             hoverOffset: 4
                         }] },
                         options: { 
@@ -512,9 +476,6 @@
             });
         }
 
-        /**
-         * 最終更新日時を表示する（init関数で取得したlastUpdatedを使用）
-         */
         function renderLastUpdated() {
             const el = document.getElementById('lastUpdatedDisplay');
             if(el) el.innerText = `Last Updated: ${lastUpdated}`;
