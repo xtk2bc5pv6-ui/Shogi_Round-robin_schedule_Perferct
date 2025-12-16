@@ -12,36 +12,26 @@
         :root { --bg-color: #121212; --neon-green: #39ff14; --danger-color: #ff3333; }
         body { background-color: var(--bg-color); color: var(--neon-green); font-family: "M PLUS Rounded 1c", sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; padding-bottom: 150px; }
         
-        /* 診断メッセージ */
         #status-board { background: #222; border: 2px solid #fff; padding: 15px; margin-bottom: 20px; border-radius: 8px; font-weight: bold; line-height: 1.6; }
         .status-ok { color: var(--neon-green); border-color: var(--neon-green); }
         .status-warn { color: #ffff00; border-color: #ffff00; }
         .status-error { color: var(--danger-color); border-color: var(--danger-color); background: rgba(255,0,0,0.1); }
         .error-detail { font-size: 0.9rem; color: #ff9999; margin-left: 15px; font-weight: normal; }
 
-        /* スタイル */
         .card { background: #1e1e1e; padding: 20px; border-radius: 12px; border: 1px solid var(--neon-green); margin-bottom: 20px; }
         h1 { text-align: center; text-shadow: 0 0 10px var(--neon-green); }
         
-        /* テーブル共通 */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #444; padding: 8px; text-align: center; vertical-align: middle; }
         th { background: #000; color: #00ffff; }
         
-        /* マトリクス表の左上セル */
         .matrix-corner { font-size: 0.8rem; line-height: 1.2; color: #ccc; background: #222; }
         .matrix-label-self { display: block; text-align: left; color: #39ff14; }
         .matrix-label-opp { display: block; text-align: right; color: #00ffff; }
-
-        /* 斜め線用（簡易的） */
-        .matrix-corner svg { width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none; opacity: 0.3; }
-        
         .diagonal-cell { background: #111; }
         
-        /* バナー */
         .streak-banner { background: rgba(0,0,0,0.6); border: 1px dashed #ff00ff; color: #ff00ff; padding: 10px; text-align: center; border-radius: 8px; margin-bottom: 20px; font-weight: bold; display: none; }
 
-        /* グラフエリア */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
         .stats-card { background: #000; padding: 15px; border-radius: 8px; border: 1px solid #333; }
         .stats-header { text-align: center; border-bottom: 1px solid #333; padding-bottom: 5px; margin-bottom: 10px; font-weight: bold; font-size: 1.2rem; }
@@ -50,18 +40,15 @@
         .chart-title { font-size: 0.9rem; margin-bottom: 5px; color: #ccc; }
         .chart-score { font-size: 1rem; margin-top: 5px; font-weight: bold; }
 
-        /* Loading */
         #loading { position: fixed; inset:0; background:#000; display:flex; justify-content:center; align-items:center; z-index:999; font-size:1.5rem;}
     </style>
 </head>
 <body>
 
     <div id="loading">データ読み込み中...</div>
-
     <div id="status-board">ステータス確認中...</div>
 
     <h1>将棋 通算勝敗表</h1>
-
     <div id="streakBanner" class="streak-banner"></div>
 
     <div class="card">
@@ -97,6 +84,7 @@
     <script>
         const EXCEL_FILE_NAME = './shogi_data.xlsx'; 
         let players = [], matches = [];
+        let chartInstances = []; // ★ここを修正しました！
 
         // Chart.js プラグイン: 中心にテキスト表示
         const centerTextPlugin = {
@@ -104,26 +92,19 @@
             beforeDraw: function(chart) {
                 if (chart.config.type !== 'doughnut') return;
                 var width = chart.width, height = chart.height, ctx = chart.ctx;
-                
                 ctx.restore();
-                
-                // カスタムオプションからテキストを取得
                 var text = chart.config.options.elements.center.text;
                 if (!text) return;
-
-                // フォント設定 (レスポンシブ対応)
                 var fontSize = (height / 100).toFixed(2);
                 ctx.font = "bold " + fontSize + "em 'M PLUS Rounded 1c'";
                 ctx.textBaseline = "middle";
-                ctx.fillStyle = "#ff3333"; // 赤ネオン色
+                ctx.fillStyle = "#ff3333";
                 ctx.shadowColor = "#ff0000";
                 ctx.shadowBlur = 10;
-
                 var textX = Math.round((width - ctx.measureText(text).width) / 2);
                 var textY = height / 2;
-
                 ctx.fillText(text, textX, textY);
-                ctx.shadowBlur = 0; // 他への影響を防ぐ
+                ctx.shadowBlur = 0;
                 ctx.save();
             }
         };
@@ -219,7 +200,7 @@
             matches.forEach(m => {
                 if(!stats[m.winner] || !stats[m.loser]) return;
                 stats[m.winner].wins++; stats[m.winner].total++; stats[m.winner].vs[m.loser]++;
-                stats[m.loser].losses++; stats[m.loser].total++; stats[m.loser].vs[m.winner]++; // 相手視点（負け）はvsカウントには含めないがマトリクス用には必要？いやvsは勝ち数だけでいい
+                stats[m.loser].losses++; stats[m.loser].total++; stats[m.loser].vs[m.winner]++;
 
                 if (stats[m.winner].currentStreak < 0) stats[m.winner].currentStreak = 1;
                 else stats[m.winner].currentStreak++;
@@ -230,7 +211,6 @@
 
             updateBanner(stats);
 
-            // 順位表
             const tbody = document.getElementById('rankingBody');
             tbody.innerHTML = "";
             let rankStats = [...stats].sort((a, b) => b.wins - a.wins);
@@ -242,11 +222,9 @@
                 tbody.innerHTML += `<tr><td>${i + 1}</td><td style="font-weight:bold">${s.name}${streakText}</td><td><span style="color:#ff00ff">${s.wins}</span> - <span style="color:#00ffff">${s.losses}</span></td><td>${rate}%</td><td>${s.total}</td></tr>`;
             });
 
-            // マトリクス表
             const mHead = document.getElementById('matrixHead');
             const mBody = document.getElementById('matrixBody');
             
-            // ヘッダー作成（左上セル工夫）
             let hHtml = '<tr><th class="matrix-corner"><span class="matrix-label-opp">相手→</span><span class="matrix-label-self">↓自分</span></th>';
             players.forEach(p => hHtml += `<th>${p.displayName}</th>`);
             hHtml += '</tr>';
@@ -260,9 +238,8 @@
                    if (rowP.id === colP.id) {
                        rowHtml += '<td class="diagonal-cell"></td>';
                    } else {
-                       // rowPから見たcolPへの勝敗
-                       const wins = rowP.vs[colP.id]; // 勝ち数
-                       const losses = stats[colP.id].vs[rowP.id]; // 相手の勝ち数＝自分の負け数
+                       const wins = rowP.vs[colP.id]; 
+                       const losses = stats[colP.id].vs[rowP.id];
                        let content = '-';
                        if (wins > 0 || losses > 0) {
                            content = `<span style="color:#ff00ff">${wins}</span> - <span style="color:#00ffff">${losses}</span>`;
@@ -274,10 +251,8 @@
                mBody.appendChild(tr);
             });
 
-            // グラフ
             renderCharts(stats);
 
-            // 履歴
             const hList = document.getElementById('historyList');
             hList.innerHTML = "";
             [...matches].reverse().slice(0, 10).forEach(m => {
@@ -343,9 +318,7 @@
                                 tooltip: { enabled: (win > 0 || loss > 0) }
                             },
                             elements: {
-                                center: {
-                                    text: centerText
-                                }
+                                center: { text: centerText }
                             }
                         }
                     }));
