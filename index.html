@@ -29,105 +29,63 @@
             position: relative;
             overflow-x: hidden;
         }
-        /* 背景パーティクル用コンテナ */
         #particles-js {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
             background-image: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%);
         }
-
-        /* 全体のコンテナ */
         .container { max-width: 1000px; margin: 0 auto; position: relative; z-index: 1; }
-
-        /* ネオンテキスト共通 */
         .neon-text-g { color: var(--neon-green); text-shadow: var(--text-glow); }
         .neon-text-b { color: var(--neon-blue); text-shadow: var(--text-glow); }
         .neon-text-p { color: var(--neon-pink); text-shadow: var(--text-glow); }
         .neon-text-r { color: var(--neon-red); text-shadow: var(--text-glow); }
 
-        /* タイトル */
         h1 {
-            font-size: 3rem; text-align: center; margin: 30px 0 10px;
-            font-weight: 900; letter-spacing: 3px;
-            color: var(--neon-green);
+            font-size: 3rem; text-align: center; margin: 30px 0 10px; font-weight: 900; letter-spacing: 3px; color: var(--neon-green);
             text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green), 0 0 40px var(--neon-green);
             animation: flicker 3s infinite alternate;
         }
         .subtitle {
-            text-align: center; font-size: 1.2rem; letter-spacing: 5px; color: var(--neon-blue);
-            text-shadow: var(--text-glow); margin-bottom: 40px; opacity: 0.8;
+            text-align: center; font-size: 1.2rem; letter-spacing: 5px; color: var(--neon-blue); text-shadow: var(--text-glow); margin-bottom: 40px; opacity: 0.8;
         }
-        @keyframes flicker {
-            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
-            20%, 24%, 55% { opacity: 0.5; }
-        }
+        @keyframes flicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: 0.5; } }
 
-        /* カードデザイン */
         .card {
-            background: var(--card-bg);
-            border: 2px solid var(--neon-blue);
-            box-shadow: 0 0 15px var(--neon-blue), inset 0 0 15px rgba(0, 243, 255, 0.2);
-            border-radius: 15px; padding: 25px; margin-bottom: 30px;
-            backdrop-filter: blur(5px);
+            background: var(--card-bg); border: 2px solid var(--neon-blue); box-shadow: 0 0 15px var(--neon-blue), inset 0 0 15px rgba(0, 243, 255, 0.2);
+            border-radius: 15px; padding: 25px; margin-bottom: 30px; backdrop-filter: blur(5px);
         }
-        h2 {
-            font-size: 1.5rem; border-bottom: 2px solid var(--neon-pink);
-            display: inline-block; padding-bottom: 5px; margin-top: 0;
-            color: var(--neon-pink); text-shadow: var(--text-glow);
-        }
+        h2 { font-size: 1.5rem; border-bottom: 2px solid var(--neon-pink); display: inline-block; padding-bottom: 5px; margin-top: 0; color: var(--neon-pink); text-shadow: var(--text-glow); }
 
-        /* ステータスボード */
         #status-board {
-            background: rgba(0,0,0,0.7); border: 2px solid var(--neon-green);
-            box-shadow: var(--box-glow); color: var(--neon-green);
-            padding: 15px; margin-bottom: 30px; border-radius: 8px; font-weight: bold; min-height: 50px;
-            text-shadow: 0 0 5px var(--neon-green);
+            background: rgba(0,0,0,0.7); border: 2px solid var(--neon-green); box-shadow: var(--box-glow); color: var(--neon-green);
+            padding: 15px; margin-bottom: 30px; border-radius: 8px; font-weight: bold; min-height: 50px; text-shadow: 0 0 5px var(--neon-green);
         }
         .status-warn { border-color: #ffff00 !important; color: #ffff00 !important; box-shadow: 0 0 10px #ffff00, inset 0 0 20px #ffff00 !important; }
         .status-error { border-color: var(--neon-red) !important; color: var(--neon-red) !important; box-shadow: 0 0 10px var(--neon-red), inset 0 0 20px var(--neon-red) !important; }
 
-        /* テーブル */
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 15px; border: 1px solid var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue); }
         th { background: rgba(0, 243, 255, 0.1); color: var(--neon-blue); padding: 12px; border-bottom: 2px solid var(--neon-blue); text-shadow: var(--text-glow); }
         td { padding: 12px; border-bottom: 1px solid rgba(0, 243, 255, 0.3); text-align: center; vertical-align: middle; }
         tbody tr:hover { background: rgba(0, 243, 255, 0.1); box-shadow: inset 0 0 20px rgba(0, 243, 255, 0.2); }
 
-        /* マトリクス表 */
         .matrix-corner { background: rgba(0,0,0,0.5); font-size: 0.8rem; }
         .diagonal-cell { background: rgba(0,0,0,0.8); }
 
-        /* バナー */
         .streak-banner {
-            background: rgba(255, 0, 255, 0.2); border: 2px solid var(--neon-pink);
-            box-shadow: 0 0 20px var(--neon-pink); color: var(--neon-pink);
-            padding: 15px; text-align: center; border-radius: 10px;
-            margin-bottom: 30px; font-weight: 900; font-size: 1.2rem;
-            text-shadow: var(--text-glow); display: none;
-            animation: pulse 1.5s infinite alternate;
+            background: rgba(255, 0, 255, 0.2); border: 2px solid var(--neon-pink); box-shadow: 0 0 20px var(--neon-pink); color: var(--neon-pink);
+            padding: 15px; text-align: center; border-radius: 10px; margin-bottom: 30px; font-weight: 900; font-size: 1.2rem;
+            text-shadow: var(--text-glow); display: none; animation: pulse 1.5s infinite alternate;
         }
         @keyframes pulse { from { box-shadow: 0 0 10px var(--neon-pink); } to { box-shadow: 0 0 30px var(--neon-pink), 0 0 10px var(--neon-pink) inset; } }
 
-        /* グラフエリア */
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
-        .stats-card {
-            background: rgba(0,0,0,0.6); border: 1px solid var(--neon-green);
-            box-shadow: 0 0 10px var(--neon-green); padding: 15px; border-radius: 12px;
-        }
+        .stats-card { background: rgba(0,0,0,0.6); border: 1px solid var(--neon-green); box-shadow: 0 0 10px var(--neon-green); padding: 15px; border-radius: 12px; }
         .stats-header { text-align: center; font-size: 1.3rem; color: var(--neon-green); text-shadow: var(--text-glow); margin-bottom: 15px; font-weight: bold; }
         .chart-wrapper { background: rgba(0,0,0,0.4); border: 1px solid rgba(57, 255, 20, 0.3); padding: 10px; border-radius: 8px; }
         .chart-title { font-size: 0.9rem; margin-bottom: 5px; color: rgba(255,255,255,0.7); }
         .chart-score { margin-top: 5px; font-weight: bold; }
 
-        /* Loading */
-        #loading {
-            position: fixed; inset:0; background:#000; z-index:9999;
-            display:flex; justify-content:center; align-items:center; flex-direction: column;
-            transition: opacity 0.5s;
-        }
-        .loading-text {
-            font-size: 2rem; font-weight: 900; color: var(--neon-green);
-            text-shadow: 0 0 20px var(--neon-green);
-            animation: flicker 1s infinite;
-        }
+        #loading { position: fixed; inset:0; background:#000; z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction: column; transition: opacity 0.5s; }
+        .loading-text { font-size: 2rem; font-weight: 900; color: var(--neon-green); text-shadow: 0 0 20px var(--neon-green); animation: flicker 1s infinite; }
     </style>
 </head>
 <body>
@@ -172,7 +130,6 @@
     </div>
 
     <script>
-        // --- パーティクル背景の設定 ---
         particlesJS('particles-js', {
             "particles": {
                 "number": { "value": 80, "density": { "enable": true, "value_area": 800 } },
@@ -191,7 +148,6 @@
             "retina_detect": true
         });
 
-        // --- メイン処理 ---
         const EXCEL_FILE_NAME = './shogi_data.xlsx'; 
         let players = [], matches = [];
         let chartInstances = [];
@@ -204,7 +160,7 @@
                 const status = document.getElementById('status-board');
                 if(status.innerText === "INITIALIZING...") {
                     status.className = "status-error";
-                    status.innerHTML = "⚠️ CONNECTION TIMEOUT: データの読み込みに失敗しました。Excelファイルを確認してください。";
+                    status.innerHTML = "⚠️ CONNECTION TIMEOUT: データの読み込みに失敗しました。";
                 }
             }
         }, 3000);
@@ -220,7 +176,7 @@
                         var text = chart.config.options.elements.center?.text;
                         if (!text) return;
                         var fontSize = (height / 100).toFixed(2);
-                        ctx.font = "bold " + fontSize + "em 'Orbitron'"; // フォント変更
+                        ctx.font = "bold " + fontSize + "em 'Orbitron'";
                         ctx.textBaseline = "middle";
                         ctx.fillStyle = "#ff3333";
                         ctx.shadowColor = "#ff0000";
@@ -239,7 +195,7 @@
         async function init() {
             const statusBoard = document.getElementById('status-board');
             try {
-                if (typeof XLSX === 'undefined' || typeof Chart === 'undefined') throw new Error("SYSTEM ERROR: ライブラリの読み込みに失敗しました。");
+                if (typeof XLSX === 'undefined' || typeof Chart === 'undefined') throw new Error("SYSTEM ERROR: Library not loaded.");
                 statusBoard.innerHTML = "📡 ACCESSING DATABASE...";
                 const response = await fetch(EXCEL_FILE_NAME + '?t=' + Date.now()); 
                 if (!response.ok) throw new Error(`❌ FILE NOT FOUND: Excelファイルが見つかりません。`);
@@ -284,9 +240,22 @@
         function render() {
             let stats = players.map(p => ({ id: p.id, name: p.displayName, wins: 0, losses: 0, total: 0, vs: Array(players.length).fill(0), currentStreak: 0 }));
             matches.sort((a, b) => a._order - b._order);
+
             matches.forEach(m => {
-                stats[m.winner].wins++; stats[m.winner].total++; stats[m.winner].vs[m.loser]++;
-                stats[m.loser].losses++; stats[m.loser].total++; stats[m.loser].vs[m.winner]++;
+                // 全体成績
+                stats[m.winner].wins++; 
+                stats[m.winner].total++; 
+                stats[m.loser].losses++; 
+                stats[m.loser].total++; 
+                
+                // ★修正箇所: 対戦相手(vs)ごとの勝敗★
+                // 勝者は、敗者に対して「1勝」追加
+                stats[m.winner].vs[m.loser]++;
+                
+                // 敗者は、勝者に対して「何も足さない」（試合数は増えるが、勝ちは増えない）
+                // ※ ここで stats[m.loser].vs[m.winner]++ を消しました！
+
+                // 連勝計算
                 stats[m.winner].currentStreak = stats[m.winner].currentStreak < 0 ? 1 : stats[m.winner].currentStreak + 1;
                 stats[m.loser].currentStreak = stats[m.loser].currentStreak > 0 ? -1 : stats[m.loser].currentStreak - 1;
             });
@@ -322,7 +291,8 @@
                players.forEach((colP) => {
                    if (rowP.id === colP.id) rowHtml += '<td class="diagonal-cell" style="border-color:var(--neon-green);"></td>';
                    else {
-                       const wins = rowP.vs[colP.id]; const losses = stats[colP.id].vs[rowP.id];
+                       const wins = rowP.vs[colP.id]; // 自分が勝った数
+                       const losses = stats[colP.id].vs[rowP.id]; // 相手が勝った数（＝自分の負け数）
                        const content = (wins > 0 || losses > 0) ? `<span class="neon-text-p">${wins}</span> - <span class="neon-text-b">${losses}</span>` : '-';
                        rowHtml += `<td style="border-color:var(--neon-green);">${content}</td>`;
                    }
