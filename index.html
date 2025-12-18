@@ -103,7 +103,7 @@
             if(loader && loader.style.display !== 'none') {
                 loader.style.opacity = '0'; setTimeout(() => loader.style.display = 'none', 500);
                 const status = document.getElementById('status-board');
-                if(status.innerText === "INITIALIZING...") { status.className = "status-error"; status.innerHTML = "⚠️ CONNECTION TIMEOUT: データの読み込みに失敗しました。"; }
+                if(status.innerText === "INITIALIZING...") { status.className = "status-error"; status.innerHTML = "⚠️ CONNECTION TIMEOUT: データの読み込みに時間がかかっています。Excelを確認してください。"; }
             }
         }, 3000);
 
@@ -119,14 +119,15 @@
                         const text = chart.config.options.elements.center?.text;
                         if (!text) return;
                         
-                        // ★修正: フォントサイズを調整し、強力なネオンレッド発光を適用★
-                        const fontSize = (height / 140).toFixed(2); // 文字数が増えたので少し小さく
-                        ctx.font = `900 ${fontSize}em 'M PLUS Rounded 1c'`; // 極太フォント
+                        // フォント調整
+                        const fontSize = (height / 140).toFixed(2); 
+                        ctx.font = `900 ${fontSize}em 'M PLUS Rounded 1c'`;
                         ctx.textBaseline = "middle";
-                        const neonRed = "#ff0055"; // ビビッドな赤
+                        // 強力な赤ネオン
+                        const neonRed = "#ff0055"; 
                         ctx.fillStyle = neonRed;
                         ctx.shadowColor = neonRed;
-                        ctx.shadowBlur = 25; // 強力な発光
+                        ctx.shadowBlur = 25;
 
                         const textX = Math.round((width - ctx.measureText(text).width) / 2);
                         const textY = height / 2;
@@ -139,15 +140,15 @@
             init();
         });
 
-        // ★追加: ネオンストライプパターンを生成する関数★
+        // ネオンストライプパターン生成関数
         function createNeonPattern(ctx, color) {
             const patternCanvas = document.createElement('canvas');
-            const size = 20;
+            const size = 15;
             patternCanvas.width = size; patternCanvas.height = size;
             const pCtx = patternCanvas.getContext('2d');
-            pCtx.fillStyle = 'transparent'; pCtx.fillRect(0, 0, size, size);
-            pCtx.strokeStyle = color; pCtx.lineWidth = 3; pCtx.lineCap = 'round';
-            pCtx.shadowColor = color; pCtx.shadowBlur = 10; // 線自体を発光させる
+            pCtx.fillStyle = 'rgba(0,0,0,0.3)'; pCtx.fillRect(0, 0, size, size);
+            pCtx.strokeStyle = color; pCtx.lineWidth = 2; pCtx.lineCap = 'round';
+            pCtx.shadowColor = color; pCtx.shadowBlur = 5; 
             pCtx.beginPath(); pCtx.moveTo(-5, size + 5); pCtx.lineTo(size + 5, -5); pCtx.stroke();
             return ctx.createPattern(patternCanvas, 'repeat');
         }
@@ -181,4 +182,106 @@
 
                 if (matches.length > 0) {
                     let msg = `✅ SYSTEM READY. Loaded ${matches.length} matches.`;
-                    if (errorDetails.length > 0) { msg += `<br><span style="color:#ffff00">⚠️ WARNING: ${errorDetails.length} lines skipped.</span>`; statusBoard.className = "status-warn
+                    if (errorDetails.length > 0) { msg += `<br><span style="color:#ffff00">⚠️ WARNING: ${errorDetails.length} lines skipped.</span>`; statusBoard.className = "status-warn"; } else { statusBoard.className = "status-ok"; }
+                    statusBoard.innerHTML = msg;
+                } else { throw new Error("❌ NO DATA: データが0件です。"); }
+                render();
+            } catch (err) {
+                statusBoard.className = "status-error"; statusBoard.innerHTML = `⚠️ CRITICAL ERROR: <br>${err.message}`;
+            } finally {
+                const loader = document.getElementById('loading'); if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.style.display = 'none', 500); }
+            }
+        }
+
+        function render() {
+            let stats = players.map(p => ({ id: p.id, name: p.displayName, wins: 0, losses: 0, total: 0, vs: Array(players.length).fill(0), currentStreak: 0 }));
+            matches.sort((a, b) => a._order - b._order);
+            matches.forEach(m => {
+                stats[m.winner].wins++; stats[m.winner].total++; stats[m.loser].losses++; stats[m.loser].total++; 
+                stats[m.winner].vs[m.loser]++; // 正しい計算ロジック
+                stats[m.winner].currentStreak = stats[m.winner].currentStreak < 0 ? 1 : stats[m.winner].currentStreak + 1;
+                stats[m.loser].currentStreak = stats[m.loser].currentStreak > 0 ? -1 : stats[m.loser].currentStreak - 1;
+            });
+
+            // バナー
+            const banner = document.getElementById('streakBanner');
+            let topStreak = 0, topName = "";
+            stats.forEach(s => { if(s.currentStreak >= 3 && s.currentStreak > topStreak) { topStreak = s.currentStreak; topName = s.name; } });
+            if (topStreak > 0) { banner.style.display = "block"; banner.innerHTML = `🔥 CAUTION: ${topName} IS ON A ${topStreak}-WIN STREAK! 🔥`; } else { banner.style.display = "none"; }
+
+            // 順位表
+            const tbody = document.getElementById('rankingBody'); tbody.innerHTML = "";
+            [...stats].sort((a, b) => b.wins - a.wins).forEach((s, i) => {
+                const rate = s.total ? (s.wins / s.total * 100).toFixed(1) : 0;
+                let streakText = "";
+                if(s.currentStreak >= 3) streakText = ` <span class="neon-text-p">🔥${s.currentStreak}連勝</span>`;
+                else if(s.currentStreak <= -3) streakText = ` <span class="neon-text-b">☔${Math.abs(s.currentStreak)}連敗</span>`;
+                tbody.innerHTML += `<tr><td>${i + 1}</td><td style="font-weight:bold; font-size:1.1rem;">${s.name}${streakText}</td><td><span class="neon-text-p">${s.wins}</span> - <span class="neon-text-b">${s.losses}</span></td><td>${rate}%</td><td>${s.total}</td></tr>`;
+            });
+
+            // マトリクス
+            const mHead = document.getElementById('matrixHead'); const mBody = document.getElementById('matrixBody');
+            let hHtml = '<tr><th class="matrix-corner" style="border-color:var(--neon-green);"><span class="matrix-label-opp" style="color:var(--neon-green);">Opponent→</span><span class="matrix-label-self" style="color:var(--neon-green);">↓You</span></th>';
+            players.forEach(p => hHtml += `<th style="border-color:var(--neon-green); color:var(--neon-green);">${p.displayName}</th>`);
+            mHead.innerHTML = hHtml + '</tr>'; mBody.innerHTML = '';
+            stats.forEach((rowP) => {
+               const tr = document.createElement('tr');
+               let rowHtml = `<th style="border-color:var(--neon-green); color:var(--neon-green);">${rowP.name}</th>`;
+               players.forEach((colP) => {
+                   if (rowP.id === colP.id) rowHtml += '<td class="diagonal-cell" style="border-color:var(--neon-green);"></td>';
+                   else {
+                       const wins = rowP.vs[colP.id]; const losses = stats[colP.id].vs[rowP.id];
+                       const content = (wins > 0 || losses > 0) ? `<span class="neon-text-p">${wins}</span> - <span class="neon-text-b">${losses}</span>` : '-';
+                       rowHtml += `<td style="border-color:var(--neon-green);">${content}</td>`;
+                   }
+               });
+               mBody.appendChild(tr).innerHTML = rowHtml;
+            });
+
+            // グラフ描画処理
+            const container = document.getElementById('statsList');
+            chartInstances.forEach(c => c.destroy()); chartInstances = []; container.innerHTML = '';
+            stats.forEach(p => {
+                const card = document.createElement('div'); card.className = 'stats-card';
+                card.style.borderColor = "var(--neon-red)"; card.style.boxShadow = "0 0 10px var(--neon-red)";
+                let chartsHtml = `<div class="charts-container">`;
+                players.filter(opp => opp.id !== p.id).forEach(opp => {
+                    const canvasId = `chart-${p.id}-vs-${opp.id}`;
+                    chartsHtml += `<div class="chart-wrapper" style="border-color:var(--neon-red);"><div class="chart-title">vs ${opp.displayName}</div><div style="height:140px;"><canvas id="${canvasId}"></canvas></div><div class="chart-score"><span class="neon-text-p">${p.vs[opp.id]}勝</span> - <span class="neon-text-b">${stats[opp.id].vs[p.id]}敗</span></div></div>`;
+                });
+                card.innerHTML = `<div class="stats-header neon-text-r">${p.name}</div>` + chartsHtml + `</div>`;
+                container.appendChild(card);
+                players.filter(opp => opp.id !== p.id).forEach(opp => {
+                    const canvas = document.getElementById(`chart-${p.id}-vs-${opp.id}`);
+                    const ctx = canvas.getContext('2d');
+                    const win = p.vs[opp.id], loss = stats[opp.id].vs[p.id];
+                    
+                    // ネオンストライプパターン適用
+                    const winPattern = createNeonPattern(ctx, '#ff00ff'); // Neon Pink
+                    const lossPattern = createNeonPattern(ctx, '#00f3ff'); // Neon Blue
+                    const grayPattern = createNeonPattern(ctx, '#444');
+
+                    let chartData = (win==0&&loss==0) ? [1] : [win, loss];
+                    let chartColors = (win==0&&loss==0) ? [grayPattern] : [winPattern, lossPattern];
+                    let centerText = (win==0&&loss==0) ? "-" : `勝率：${Math.round(win/(win+loss)*100)}％`;
+
+                    chartInstances.push(new Chart(ctx, {
+                        type: 'doughnut',
+                        data: { 
+                            labels: ['Win', 'Loss'], 
+                            datasets: [{ 
+                                data: chartData, 
+                                backgroundColor: chartColors, 
+                                borderWidth: 2,
+                                borderColor: '#222',
+                                cutout: '60%' 
+                            }] 
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend:false, tooltip:{enabled:(win>0||loss>0)} }, elements: { center: { text: centerText } } }
+                    }));
+                });
+            });
+        }
+    </script>
+</body>
+</html>
