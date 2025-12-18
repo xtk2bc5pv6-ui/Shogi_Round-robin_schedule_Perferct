@@ -123,10 +123,11 @@
                         const fontSize = (height / 140).toFixed(2); 
                         ctx.font = `900 ${fontSize}em 'M PLUS Rounded 1c'`;
                         ctx.textBaseline = "middle";
-                        // 強力な赤ネオン
-                        const neonRed = "#ff0055"; 
-                        ctx.fillStyle = neonRed;
-                        ctx.shadowColor = neonRed;
+                        
+                        // ★修正: テキスト色をネオンピンクに変更★
+                        const neonPink = "#ff00ff"; 
+                        ctx.fillStyle = neonPink;
+                        ctx.shadowColor = neonPink;
                         ctx.shadowBlur = 25;
 
                         const textX = Math.round((width - ctx.measureText(text).width) / 2);
@@ -139,19 +140,6 @@
             }
             init();
         });
-
-        // ネオンストライプパターン生成関数
-        function createNeonPattern(ctx, color) {
-            const patternCanvas = document.createElement('canvas');
-            const size = 15;
-            patternCanvas.width = size; patternCanvas.height = size;
-            const pCtx = patternCanvas.getContext('2d');
-            pCtx.fillStyle = 'rgba(0,0,0,0.3)'; pCtx.fillRect(0, 0, size, size);
-            pCtx.strokeStyle = color; pCtx.lineWidth = 2; pCtx.lineCap = 'round';
-            pCtx.shadowColor = color; pCtx.shadowBlur = 5; 
-            pCtx.beginPath(); pCtx.moveTo(-5, size + 5); pCtx.lineTo(size + 5, -5); pCtx.stroke();
-            return ctx.createPattern(patternCanvas, 'repeat');
-        }
 
         async function init() {
             const statusBoard = document.getElementById('status-board');
@@ -198,7 +186,7 @@
             matches.sort((a, b) => a._order - b._order);
             matches.forEach(m => {
                 stats[m.winner].wins++; stats[m.winner].total++; stats[m.loser].losses++; stats[m.loser].total++; 
-                stats[m.winner].vs[m.loser]++; // 正しい計算ロジック
+                stats[m.winner].vs[m.loser]++; 
                 stats[m.winner].currentStreak = stats[m.winner].currentStreak < 0 ? 1 : stats[m.winner].currentStreak + 1;
                 stats[m.loser].currentStreak = stats[m.loser].currentStreak > 0 ? -1 : stats[m.loser].currentStreak - 1;
             });
@@ -256,14 +244,19 @@
                     const ctx = canvas.getContext('2d');
                     const win = p.vs[opp.id], loss = stats[opp.id].vs[p.id];
                     
-                    // ネオンストライプパターン適用
-                    const winPattern = createNeonPattern(ctx, '#ff00ff'); // Neon Pink
-                    const lossPattern = createNeonPattern(ctx, '#00f3ff'); // Neon Blue
-                    const grayPattern = createNeonPattern(ctx, '#444');
+                    // ★修正: ソリッドネオンカラーと太いボーダーライン★
+                    const winColor = 'rgba(255, 0, 255, 0.7)'; // 少し透けたピンク
+                    const winBorder = '#ff00ff'; // 強いピンクの枠線
+                    const lossColor = 'rgba(0, 243, 255, 0.7)'; // 少し透けたブルー
+                    const lossBorder = '#00f3ff'; // 強いブルーの枠線
+                    const grayColor = 'rgba(68, 68, 68, 0.7)';
+                    const grayBorder = '#555';
 
                     let chartData = (win==0&&loss==0) ? [1] : [win, loss];
-                    let chartColors = (win==0&&loss==0) ? [grayPattern] : [winPattern, lossPattern];
-                    let centerText = (win==0&&loss==0) ? "-" : `勝率：${Math.round(win/(win+loss)*100)}％`;
+                    let bgColors = (win==0&&loss==0) ? [grayColor] : [winColor, lossColor];
+                    let borderColors = (win==0&&loss==0) ? [grayBorder] : [winBorder, lossBorder];
+                    // ★修正: テキストから「勝率：」を削除★
+                    let centerText = (win==0&&loss==0) ? "-" : `${Math.round(win/(win+loss)*100)}％`;
 
                     chartInstances.push(new Chart(ctx, {
                         type: 'doughnut',
@@ -271,9 +264,10 @@
                             labels: ['Win', 'Loss'], 
                             datasets: [{ 
                                 data: chartData, 
-                                backgroundColor: chartColors, 
-                                borderWidth: 2,
-                                borderColor: '#222',
+                                backgroundColor: bgColors, 
+                                borderColor: borderColors,
+                                borderWidth: 3, // 枠線を太くして発光感を強調
+                                hoverOffset: 8, // ホバー時に飛び出す
                                 cutout: '60%' 
                             }] 
                         },
