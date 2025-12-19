@@ -124,7 +124,7 @@
                         ctx.font = `900 ${fontSize}em 'M PLUS Rounded 1c'`;
                         ctx.textBaseline = "middle";
                         
-                        // ★修正: テキスト色をネオンピンクに変更★
+                        // テキスト色をネオンピンクに変更
                         const neonPink = "#ff00ff"; 
                         ctx.fillStyle = neonPink;
                         ctx.shadowColor = neonPink;
@@ -197,9 +197,14 @@
             stats.forEach(s => { if(s.currentStreak >= 3 && s.currentStreak > topStreak) { topStreak = s.currentStreak; topName = s.name; } });
             if (topStreak > 0) { banner.style.display = "block"; banner.innerHTML = `🔥 CAUTION: ${topName} IS ON A ${topStreak}-WIN STREAK! 🔥`; } else { banner.style.display = "none"; }
 
-            // 順位表
+            // 順位表（★修正: 勝率順にソート★）
             const tbody = document.getElementById('rankingBody'); tbody.innerHTML = "";
-            [...stats].sort((a, b) => b.wins - a.wins).forEach((s, i) => {
+            [...stats].sort((a, b) => {
+                const rateA = a.total ? a.wins / a.total : 0;
+                const rateB = b.total ? b.wins / b.total : 0;
+                if (rateB !== rateA) return rateB - rateA; // 勝率が高い順
+                return b.wins - a.wins; // 勝ち数が多い順
+            }).forEach((s, i) => {
                 const rate = s.total ? (s.wins / s.total * 100).toFixed(1) : 0;
                 let streakText = "";
                 if(s.currentStreak >= 3) streakText = ` <span class="neon-text-p">🔥${s.currentStreak}連勝</span>`;
@@ -244,7 +249,7 @@
                     const ctx = canvas.getContext('2d');
                     const win = p.vs[opp.id], loss = stats[opp.id].vs[p.id];
                     
-                    // ★修正: ソリッドネオンカラーと太いボーダーライン★
+                    // ソリッドネオンカラーと太いボーダーライン
                     const winColor = 'rgba(255, 0, 255, 0.7)'; // 少し透けたピンク
                     const winBorder = '#ff00ff'; // 強いピンクの枠線
                     const lossColor = 'rgba(0, 243, 255, 0.7)'; // 少し透けたブルー
@@ -255,7 +260,6 @@
                     let chartData = (win==0&&loss==0) ? [1] : [win, loss];
                     let bgColors = (win==0&&loss==0) ? [grayColor] : [winColor, lossColor];
                     let borderColors = (win==0&&loss==0) ? [grayBorder] : [winBorder, lossBorder];
-                    // ★修正: テキストから「勝率：」を削除★
                     let centerText = (win==0&&loss==0) ? "-" : `${Math.round(win/(win+loss)*100)}％`;
 
                     chartInstances.push(new Chart(ctx, {
@@ -266,8 +270,8 @@
                                 data: chartData, 
                                 backgroundColor: bgColors, 
                                 borderColor: borderColors,
-                                borderWidth: 3, // 枠線を太くして発光感を強調
-                                hoverOffset: 8, // ホバー時に飛び出す
+                                borderWidth: 3, 
+                                hoverOffset: 8, 
                                 cutout: '60%' 
                             }] 
                         },
