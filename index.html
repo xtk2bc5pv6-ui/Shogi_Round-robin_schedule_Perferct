@@ -22,40 +22,30 @@
         #particles-js { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-image: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%); }
         .container { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
 
-        /* タイトル調整 (スマホで改行しないようにサイズ可変) */
         h1 {
-            font-size: clamp(1.8rem, 5vw, 3rem); /* 画面幅に合わせて伸縮 */
-            text-align: center; margin: 20px 0 5px; font-weight: 900; letter-spacing: 2px;
-            color: var(--neon-green); white-space: nowrap; /* 改行禁止 */
+            font-size: clamp(1.8rem, 5vw, 3rem); text-align: center; margin: 20px 0 5px; font-weight: 900; letter-spacing: 2px;
+            color: var(--neon-green); white-space: nowrap;
             text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
             animation: flicker 3s infinite alternate;
         }
         .subtitle { text-align: center; font-size: 0.9rem; letter-spacing: 3px; color: var(--neon-blue); text-shadow: var(--text-glow); margin-bottom: 30px; opacity: 0.8; }
         @keyframes flicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: 0.5; } }
 
-        /* カード */
         .card { background: var(--card-bg); border: 1px solid var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue), inset 0 0 10px rgba(0, 243, 255, 0.1); border-radius: 12px; padding: 15px; margin-bottom: 25px; backdrop-filter: blur(5px); }
         h2 { font-size: 1.2rem; border-bottom: 2px solid var(--neon-pink); display: inline-block; padding-bottom: 5px; margin-top: 0; color: var(--neon-pink); text-shadow: var(--text-glow); }
 
-        /* テーブル (スマホ対応: 文字小さく＆改行禁止) */
         .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; min-width: 100%; }
         th, td { 
             padding: 10px 5px; text-align: center; vertical-align: middle; 
-            border-bottom: 1px solid rgba(0, 243, 255, 0.3);
-            white-space: nowrap; /* 改行禁止 */
-            font-size: 0.95rem;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.3); white-space: nowrap; font-size: 0.95rem;
         }
         th { background: rgba(0, 243, 255, 0.1); color: var(--neon-blue); border-bottom: 2px solid var(--neon-blue); }
         
-        /* 順位表の名前セル（タップ可能感） */
-        .player-name-cell {
-            cursor: pointer; color: var(--neon-green); text-decoration: underline; text-underline-offset: 4px; font-weight: bold;
-            transition: 0.2s;
-        }
+        .player-name-cell { cursor: pointer; color: var(--neon-green); text-decoration: underline; text-underline-offset: 4px; font-weight: bold; transition: 0.2s; }
         .player-name-cell:hover { color: #fff; text-shadow: 0 0 10px #fff; }
         
-        /* モーダル (ポップアップ) */
+        /* モーダル */
         .modal-overlay {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.9); z-index: 2000; justify-content: center; align-items: center;
@@ -64,22 +54,28 @@
         .modal-content {
             background: #111; border: 2px solid var(--neon-red); box-shadow: 0 0 30px var(--neon-red);
             width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto;
-            border-radius: 15px; padding: 20px; position: relative;
-            text-align: center;
+            border-radius: 15px; padding: 20px; position: relative; text-align: center;
         }
-        .close-btn {
-            position: absolute; top: 10px; right: 15px; font-size: 2rem; color: #fff; cursor: pointer;
-            background: none; border: none; font-family: sans-serif;
-        }
-        .modal-title { font-size: 1.5rem; color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); margin-bottom: 20px; font-weight: bold; }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 2rem; color: #fff; cursor: pointer; background: none; border: none; font-family: sans-serif; }
+        .modal-title { font-size: 1.5rem; color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); margin-bottom: 10px; font-weight: bold; }
 
-        /* グラフエリア (モーダル内) */
+        /* 直近成績エリア */
+        .recent-stats-box {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid #555; border-radius: 8px;
+            padding: 15px; margin-bottom: 20px; text-align: center;
+        }
+        .recent-summary { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #fff; }
+        .recent-history { font-size: 1.5rem; letter-spacing: 5px; line-height: 1.5; word-break: break-all; }
+        
+        /* ★修正★ 推移のモノクロ設定 */
+        .mark-win { color: #ffffff; /* 白 */ }
+        .mark-loss { color: #666666; /* グレー (黒の代わり) */ }
+
         .charts-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
         .chart-wrapper { width: 45%; min-width: 140px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid #444; }
         .chart-title { font-size: 0.85rem; color: #ccc; margin-bottom: 5px; }
         .chart-score { font-size: 1rem; font-weight: bold; margin-top: 5px; }
 
-        /* その他パーツ */
         .streak-banner { background: rgba(255,0,255,0.15); border: 1px solid var(--neon-pink); padding: 10px; text-align: center; border-radius: 8px; margin-bottom: 20px; font-weight: bold; font-size: 1rem; color: var(--neon-pink); display: none; }
         .neon-text-p { color: var(--neon-pink); } .neon-text-b { color: var(--neon-blue); }
         .matrix-corner { font-size: 0.75rem; background: #222; }
@@ -88,13 +84,12 @@
         #loading { position: fixed; inset:0; background:#000; z-index:9999; display:flex; justify-content:center; align-items:center; flex-direction: column; transition: opacity 0.5s; }
         .loading-text { font-size: 1.5rem; font-weight: 900; color: var(--neon-green); animation: flicker 1s infinite; }
 
-        /* スマホ用微調整 */
         @media (max-width: 600px) {
             body { padding: 10px; }
             h1 { margin-top: 10px; }
             .card { padding: 10px; }
             th, td { font-size: 0.85rem; padding: 8px 4px; }
-            .chart-wrapper { width: 100%; } /* スマホではグラフを1列に */
+            .chart-wrapper { width: 100%; } 
         }
     </style>
 </head>
@@ -134,19 +129,20 @@
         <div class="modal-content">
             <button class="close-btn" onclick="closeModalForce()">×</button>
             <div id="modalTitle" class="modal-title">PLAYER NAME</div>
+            
+            <div id="modalRecent" class="recent-stats-box"></div>
+
             <div id="modalCharts" class="charts-container"></div>
         </div>
     </div>
 
     <script>
-        // 背景設定
         particlesJS('particles-js', { "particles": { "number": { "value": 50 }, "color": { "value": ["#39ff14", "#00f3ff", "#ff00ff"] }, "shape": { "type": "circle" }, "opacity": { "value": 0.5 }, "size": { "value": 3 }, "line_linked": { "enable": true, "distance": 150, "color": "#00f3ff", "opacity": 0.3, "width": 1 }, "move": { "speed": 2 } }, "interactivity": { "events": { "onhover": { "enable": false }, "onclick": { "enable": true, "mode": "push" } } } });
 
         const EXCEL_FILE_NAME = './shogi_data.xlsx'; 
         let players = [], matches = [];
         let modalChartInstances = [];
 
-        // Loading解除
         setTimeout(() => {
             const loader = document.getElementById('loading');
             if(loader) { loader.style.opacity = '0'; setTimeout(() => loader.style.display = 'none', 500); }
@@ -204,7 +200,7 @@
             }
         }
 
-        let statsData = []; // グローバル変数化
+        let statsData = [];
 
         function render() {
             statsData = players.map(p => ({ id: p.id, name: p.displayName, wins: 0, losses: 0, total: 0, vs: Array(players.length).fill(0), currentStreak: 0 }));
@@ -213,19 +209,17 @@
             matches.forEach(m => {
                 statsData[m.winner].wins++; statsData[m.winner].total++; 
                 statsData[m.loser].losses++; statsData[m.loser].total++; 
-                statsData[m.winner].vs[m.loser]++; // 対戦相手ごとの勝利数
+                statsData[m.winner].vs[m.loser]++; 
                 
                 statsData[m.winner].currentStreak = statsData[m.winner].currentStreak < 0 ? 1 : statsData[m.winner].currentStreak + 1;
                 statsData[m.loser].currentStreak = statsData[m.loser].currentStreak > 0 ? -1 : statsData[m.loser].currentStreak - 1;
             });
 
-            // バナー
             const banner = document.getElementById('streakBanner');
             let topStreak = 0, topName = "";
             statsData.forEach(s => { if(s.currentStreak >= 3 && s.currentStreak > topStreak) { topStreak = s.currentStreak; topName = s.name; } });
             if (topStreak > 0) { banner.style.display = "block"; banner.innerHTML = `🔥 ${topName} が ${topStreak}連勝中！ 🔥`; } else { banner.style.display = "none"; }
 
-            // 順位表 (勝率順)
             const tbody = document.getElementById('rankingBody'); tbody.innerHTML = "";
             [...statsData].sort((a, b) => {
                 const rateA = a.total ? a.wins / a.total : 0;
@@ -238,7 +232,6 @@
                 if(s.currentStreak >= 3) streakText = ` <span class="neon-text-p">🔥${s.currentStreak}</span>`;
                 else if(s.currentStreak <= -3) streakText = ` <span class="neon-text-b">☔${Math.abs(s.currentStreak)}</span>`;
                 
-                // ★クリックイベント追加★
                 tbody.innerHTML += `
                     <tr onclick="openModal(${s.id})">
                         <td>${i + 1}</td>
@@ -249,7 +242,6 @@
                     </tr>`;
             });
 
-            // マトリクス
             const mHead = document.getElementById('matrixHead'); const mBody = document.getElementById('matrixBody');
             let hHtml = '<tr><th class="matrix-corner" style="border-color:var(--neon-green);"><span style="color:var(--neon-blue); display:block; text-align:right;">相手→</span><span style="color:var(--neon-green); display:block; text-align:left;">↓自分</span></th>';
             players.forEach(p => hHtml += `<th style="border-color:var(--neon-green); color:var(--neon-green);">${p.displayName}</th>`);
@@ -269,42 +261,67 @@
             });
         }
 
-        // --- モーダル制御 ---
         function openModal(playerId) {
             const playerStats = statsData.find(p => p.id === playerId);
             if(!playerStats) return;
 
             document.getElementById('modalTitle').innerText = `${playerStats.name} の戦績`;
             const container = document.getElementById('modalCharts');
+            const recentContainer = document.getElementById('modalRecent');
             container.innerHTML = "";
+            recentContainer.innerHTML = "";
             modalChartInstances.forEach(c => c.destroy());
             modalChartInstances = [];
 
+            // ★直近成績の計算ロジック★
+            // 自分の試合だけを抽出し、Order(ID)の降順（新しい順）に並べ替え
+            const myMatches = matches
+                .filter(m => m.winner === playerId || m.loser === playerId)
+                .sort((a, b) => b._order - a._order)
+                .slice(0, 10); // 最新10件
+
+            if (myMatches.length > 0) {
+                let wCount = 0; let lCount = 0;
+                let historyHtml = "";
+
+                // 最新が左に来るように表示した方が分かりやすいが、
+                // 「推移」として時系列（過去→未来）で見たい場合はreverseする。
+                // ここでは「左＝過去 → 右＝最新」の時系列順で表示します。
+                const displayMatches = [...myMatches].reverse(); 
+
+                displayMatches.forEach(m => {
+                    if (m.winner === playerId) {
+                        wCount++;
+                        historyHtml += '<span class="mark-win">○</span>';
+                    } else {
+                        lCount++;
+                        historyHtml += '<span class="mark-loss">●</span>';
+                    }
+                });
+
+                recentContainer.innerHTML = `
+                    <div class="recent-summary">直近10戦：${wCount}勝 ${lCount}敗</div>
+                    <div class="recent-history">${historyHtml}</div>
+                    <div style="font-size:0.7rem; color:#666; margin-top:5px;">(左:過去 → 右:最新)</div>
+                `;
+            } else {
+                recentContainer.innerHTML = `<div style="color:#666">対戦データがありません</div>`;
+            }
+
             const opponents = players.filter(opp => opp.id !== playerId);
-            
-            // グラフ生成
             opponents.forEach(opp => {
                 const win = playerStats.vs[opp.id];
                 const loss = statsData[opp.id].vs[playerId];
-                
-                // 対戦がない場合は表示しない（またはグレー表示）今回は表示する
                 const wrapper = document.createElement('div');
                 wrapper.className = 'chart-wrapper';
                 const canvasId = `modalChart-${opp.id}`;
-                wrapper.innerHTML = `
-                    <div class="chart-title">vs ${opp.displayName}</div>
-                    <div style="height:120px; position:relative;"><canvas id="${canvasId}"></canvas></div>
-                    <div class="chart-score"><span class="neon-text-p">${win}勝</span> - <span class="neon-text-b">${loss}敗</span></div>
-                `;
+                wrapper.innerHTML = `<div class="chart-title">vs ${opp.displayName}</div><div style="height:120px; position:relative;"><canvas id="${canvasId}"></canvas></div><div class="chart-score"><span class="neon-text-p">${win}勝</span> - <span class="neon-text-b">${loss}敗</span></div>`;
                 container.appendChild(wrapper);
 
                 const ctx = document.getElementById(canvasId).getContext('2d');
-                
-                // ソリッドカラー設定
                 const winColor = 'rgba(255, 0, 255, 0.8)';
                 const lossColor = 'rgba(0, 243, 255, 0.8)';
                 const grayColor = 'rgba(68, 68, 68, 0.5)';
-                
                 let chartData = (win==0&&loss==0) ? [1] : [win, loss];
                 let bgColors = (win==0&&loss==0) ? [grayColor] : [winColor, lossColor];
                 let borderColors = (win==0&&loss==0) ? ['#555'] : ['#ff00ff', '#00f3ff'];
@@ -312,37 +329,15 @@
 
                 modalChartInstances.push(new Chart(ctx, {
                     type: 'doughnut',
-                    data: {
-                        labels: ['Win', 'Loss'],
-                        datasets: [{
-                            data: chartData,
-                            backgroundColor: bgColors,
-                            borderColor: borderColors,
-                            borderWidth: 2,
-                            hoverOffset: 5,
-                            cutout: '65%'
-                        }]
-                    },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false, 
-                        plugins: { legend: false, tooltip: { enabled: (win>0||loss>0) } },
-                        elements: { center: { text: centerText } }
-                    }
+                    data: { labels: ['Win', 'Loss'], datasets: [{ data: chartData, backgroundColor: bgColors, borderColor: borderColors, borderWidth: 2, hoverOffset: 5, cutout: '65%' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: false, tooltip: { enabled: (win>0||loss>0) } }, elements: { center: { text: centerText } } }
                 }));
             });
-
             document.getElementById('statsModal').style.display = 'flex';
         }
 
-        function closeModal(e) {
-            if (e.target.id === 'statsModal') {
-                document.getElementById('statsModal').style.display = 'none';
-            }
-        }
-        function closeModalForce() {
-            document.getElementById('statsModal').style.display = 'none';
-        }
+        function closeModal(e) { if (e.target.id === 'statsModal') { document.getElementById('statsModal').style.display = 'none'; } }
+        function closeModalForce() { document.getElementById('statsModal').style.display = 'none'; }
     </script>
 </body>
 </html>
