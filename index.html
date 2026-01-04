@@ -64,12 +64,27 @@
             background: rgba(255, 255, 255, 0.05); border: 1px solid #555; border-radius: 8px;
             padding: 15px; margin-bottom: 20px; text-align: center;
         }
-        .recent-summary { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; color: #fff; }
-        .recent-history { font-size: 1.5rem; letter-spacing: 5px; line-height: 1.5; word-break: break-all; }
+        .recent-summary { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; color: #fff; }
+        .recent-history { 
+            display: flex; justify-content: center; gap: 8px; /* マーク間の間隔 */
+            margin-bottom: 10px;
+        }
         
-        /* ★修正★ 推移のモノクロ設定 */
-        .mark-win { color: #ffffff; /* 白 */ }
-        .mark-loss { color: #666666; /* グレー (黒の代わり) */ }
+        /* ★修正★ 推移マークのCSSデザイン */
+        .mark-common {
+            display: inline-block; width: 1.3rem; height: 1.3rem; border-radius: 50%;
+            vertical-align: middle;
+        }
+        /* 白星: 縁も中も白 */
+        .mark-win {
+            background-color: #ffffff; border: 2px solid #ffffff;
+            box-shadow: 0 0 8px #ffffff; /* 軽く発光 */
+        }
+        /* 黒星: 縁が白、中は透明(黒) */
+        .mark-loss {
+            background-color: transparent; border: 2px solid #ffffff;
+            opacity: 0.6; /* 少し暗くする */
+        }
 
         .charts-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
         .chart-wrapper { width: 45%; min-width: 140px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid #444; }
@@ -273,29 +288,25 @@
             modalChartInstances.forEach(c => c.destroy());
             modalChartInstances = [];
 
-            // ★直近成績の計算ロジック★
-            // 自分の試合だけを抽出し、Order(ID)の降順（新しい順）に並べ替え
             const myMatches = matches
                 .filter(m => m.winner === playerId || m.loser === playerId)
                 .sort((a, b) => b._order - a._order)
-                .slice(0, 10); // 最新10件
+                .slice(0, 10);
 
             if (myMatches.length > 0) {
                 let wCount = 0; let lCount = 0;
                 let historyHtml = "";
-
-                // 最新が左に来るように表示した方が分かりやすいが、
-                // 「推移」として時系列（過去→未来）で見たい場合はreverseする。
-                // ここでは「左＝過去 → 右＝最新」の時系列順で表示します。
                 const displayMatches = [...myMatches].reverse(); 
 
                 displayMatches.forEach(m => {
                     if (m.winner === playerId) {
                         wCount++;
-                        historyHtml += '<span class="mark-win">○</span>';
+                        // ★修正★ CSSで描画する白星マーク
+                        historyHtml += '<span class="mark-common mark-win"></span>';
                     } else {
                         lCount++;
-                        historyHtml += '<span class="mark-loss">●</span>';
+                        // ★修正★ CSSで描画する黒星マーク
+                        historyHtml += '<span class="mark-common mark-loss"></span>';
                     }
                 });
 
