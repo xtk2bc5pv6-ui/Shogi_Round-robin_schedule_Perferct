@@ -22,69 +22,64 @@
         #particles-js { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; background-image: radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%); }
         .container { max-width: 900px; margin: 0 auto; position: relative; z-index: 1; }
 
+        /* タイトルエリア */
         h1 {
             font-size: clamp(1.8rem, 5vw, 3rem); text-align: center; margin: 20px 0 5px; font-weight: 900; letter-spacing: 2px;
             color: var(--neon-green); white-space: nowrap;
             text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green);
             animation: flicker 3s infinite alternate;
         }
-        .subtitle { text-align: center; font-size: 0.9rem; letter-spacing: 3px; color: var(--neon-blue); text-shadow: var(--text-glow); margin-bottom: 30px; opacity: 0.8; }
+        .subtitle { text-align: center; font-size: 0.9rem; letter-spacing: 3px; color: var(--neon-blue); text-shadow: var(--text-glow); margin-bottom: 5px; opacity: 0.8; }
+        .last-updated { text-align: center; font-size: 0.8rem; color: #888; margin-bottom: 30px; font-family: monospace; }
+        
         @keyframes flicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; } 20%, 24%, 55% { opacity: 0.5; } }
 
         .card { background: var(--card-bg); border: 1px solid var(--neon-blue); box-shadow: 0 0 10px var(--neon-blue), inset 0 0 10px rgba(0, 243, 255, 0.1); border-radius: 12px; padding: 15px; margin-bottom: 25px; backdrop-filter: blur(5px); }
         h2 { font-size: 1.2rem; border-bottom: 2px solid var(--neon-pink); display: inline-block; padding-bottom: 5px; margin-top: 0; color: var(--neon-pink); text-shadow: var(--text-glow); }
 
-        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; min-width: 100%; }
-        th, td { 
-            padding: 10px 5px; text-align: center; vertical-align: middle; 
-            border-bottom: 1px solid rgba(0, 243, 255, 0.3); white-space: nowrap; font-size: 0.95rem;
+        /* ★順位表のモルック風デザイン変更★ */
+        .ranking-list { width: 100%; border-collapse: separate; border-spacing: 0 8px; margin-top: 5px; }
+        .ranking-list th { color: #888; font-size: 0.8rem; padding: 5px; text-align: center; border: none; background: none; }
+        .ranking-row {
+            background: rgba(255, 255, 255, 0.05);
+            transition: 0.2s; cursor: pointer;
         }
-        th { background: rgba(0, 243, 255, 0.1); color: var(--neon-blue); border-bottom: 2px solid var(--neon-blue); }
-        
-        .player-name-cell { cursor: pointer; color: var(--neon-green); text-decoration: underline; text-underline-offset: 4px; font-weight: bold; transition: 0.2s; }
-        .player-name-cell:hover { color: #fff; text-shadow: 0 0 10px #fff; }
-        
-        /* モーダル */
-        .modal-overlay {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9); z-index: 2000; justify-content: center; align-items: center;
-            backdrop-filter: blur(8px);
-        }
-        .modal-content {
-            background: #111; border: 2px solid var(--neon-red); box-shadow: 0 0 30px var(--neon-red);
-            width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto;
-            border-radius: 15px; padding: 20px; position: relative; text-align: center;
-        }
-        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 2rem; color: #fff; cursor: pointer; background: none; border: none; font-family: sans-serif; }
-        .modal-title { font-size: 1.5rem; color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); margin-bottom: 10px; font-weight: bold; }
-
-        /* 直近成績エリア */
-        .recent-stats-box {
-            background: rgba(255, 255, 255, 0.05); border: 1px solid #555; border-radius: 8px;
-            padding: 15px; margin-bottom: 20px; text-align: center;
-        }
-        .recent-summary { font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; color: #fff; }
-        .recent-history { 
-            display: flex; justify-content: center; gap: 8px; /* マーク間の間隔 */
-            margin-bottom: 10px;
-        }
-        
-        /* ★修正★ 推移マークのCSSデザイン */
-        .mark-common {
-            display: inline-block; width: 1.3rem; height: 1.3rem; border-radius: 50%;
+        .ranking-row td {
+            padding: 15px 10px; border: 1px solid #333; border-style: solid none solid none;
             vertical-align: middle;
         }
-        /* 白星: 縁も中も白 */
-        .mark-win {
-            background-color: #ffffff; border: 2px solid #ffffff;
-            box-shadow: 0 0 8px #ffffff; /* 軽く発光 */
-        }
-        /* 黒星: 縁が白、中は透明(黒) */
-        .mark-loss {
-            background-color: transparent; border: 2px solid #ffffff;
-            opacity: 0.6; /* 少し暗くする */
-        }
+        .ranking-row td:first-child { border-left: 1px solid #333; border-radius: 8px 0 0 8px; text-align: center; font-weight: bold; color: var(--neon-blue); font-size: 1.1rem; }
+        .ranking-row td:last-child { border-right: 1px solid #333; border-radius: 0 8px 8px 0; text-align: center; font-weight: bold; color: var(--neon-pink); font-size: 1.2rem; }
+        
+        .ranking-row:hover { background: rgba(0, 243, 255, 0.1); transform: scale(1.01); box-shadow: 0 0 10px rgba(0, 243, 255, 0.2); }
+        .player-name-main { font-size: 1.1rem; font-weight: bold; color: #fff; }
+
+        /* マトリクス表 */
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .matrix-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 100%; margin-top:10px;}
+        .matrix-table th, .matrix-table td { padding: 10px 5px; text-align: center; vertical-align: middle; border-bottom: 1px solid rgba(0, 243, 255, 0.3); white-space: nowrap; font-size: 0.95rem; }
+        .matrix-table th { background: rgba(0, 243, 255, 0.1); color: var(--neon-blue); border-bottom: 2px solid var(--neon-blue); }
+        
+        /* モーダル */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(8px); }
+        .modal-content { background: #111; border: 2px solid var(--neon-red); box-shadow: 0 0 30px var(--neon-red); width: 90%; max-width: 600px; max-height: 85vh; overflow-y: auto; border-radius: 15px; padding: 20px; position: relative; text-align: center; }
+        .close-btn { position: absolute; top: 10px; right: 15px; font-size: 2rem; color: #fff; cursor: pointer; background: none; border: none; font-family: sans-serif; }
+        .modal-title { font-size: 1.5rem; color: var(--neon-red); text-shadow: 0 0 10px var(--neon-red); margin-bottom: 5px; font-weight: bold; }
+        
+        /* ★ウィジェット内の成績表示★ */
+        .total-stats-box { font-size: 1.2rem; margin-bottom: 15px; color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .total-stats-detail { font-size: 0.9rem; color: #aaa; }
+        .win-count { color: var(--neon-pink); font-size: 1.4rem; font-weight: bold; margin: 0 5px; }
+        .loss-count { color: var(--neon-blue); font-size: 1.4rem; font-weight: bold; margin: 0 5px; }
+
+        /* 直近成績 */
+        .recent-stats-box { background: rgba(255, 255, 255, 0.05); border: 1px solid #555; border-radius: 8px; padding: 10px; margin-bottom: 20px; text-align: center; }
+        .recent-summary { font-size: 1rem; font-weight: bold; margin-bottom: 8px; color: #ddd; }
+        .recent-history { display: flex; justify-content: center; gap: 8px; margin-bottom: 5px; }
+        
+        .mark-common { display: inline-block; width: 1.3rem; height: 1.3rem; border-radius: 50%; vertical-align: middle; }
+        .mark-win { background-color: #ffffff; border: 2px solid #ffffff; box-shadow: 0 0 8px #ffffff; }
+        .mark-loss { background-color: transparent; border: 2px solid #ffffff; opacity: 0.6; }
 
         .charts-container { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
         .chart-wrapper { width: 45%; min-width: 140px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; border: 1px solid #444; }
@@ -115,24 +110,23 @@
     <div class="container">
         <h1>将棋 通算勝敗表</h1>
         <div class="subtitle">CYBER BATTLE LOG</div>
+        <div id="lastUpdated" class="last-updated">Checking updates...</div>
         
         <div id="streakBanner" class="streak-banner"></div>
 
         <div class="card">
             <h2 style="color:var(--neon-pink)">順位表 (Ranking)</h2>
-            <p style="font-size:0.8rem; color:#888; margin-bottom:10px;">※名前をタップすると詳細データが見れます</p>
-            <div class="table-wrap">
-                <table>
-                    <thead><tr><th>順位</th><th>氏名</th><th>勝敗</th><th>勝率</th><th>数</th></tr></thead>
-                    <tbody id="rankingBody"></tbody>
-                </table>
-            </div>
+            <p style="font-size:0.8rem; color:#888; margin-bottom:5px;">※タップで詳細データを表示</p>
+            <table class="ranking-list">
+                <thead><tr><th width="15%">RANK</th><th>NAME</th><th width="25%">WIN RATE</th></tr></thead>
+                <tbody id="rankingBody"></tbody>
+            </table>
         </div>
 
         <div class="card" style="border-color: var(--neon-green); box-shadow: 0 0 10px var(--neon-green);">
             <h2 style="color:var(--neon-green)">総当たり表 (Matrix)</h2>
             <div class="table-wrap">
-                <table id="matrixTable" style="border-color: var(--neon-green);">
+                <table id="matrixTable" class="matrix-table" style="border-color: var(--neon-green);">
                     <thead id="matrixHead" style="background: rgba(57, 255, 20, 0.1);"></thead>
                     <tbody id="matrixBody"></tbody>
                 </table>
@@ -145,6 +139,8 @@
             <button class="close-btn" onclick="closeModalForce()">×</button>
             <div id="modalTitle" class="modal-title">PLAYER NAME</div>
             
+            <div id="modalTotalStats" class="total-stats-box"></div>
+
             <div id="modalRecent" class="recent-stats-box"></div>
 
             <div id="modalCharts" class="charts-container"></div>
@@ -191,6 +187,17 @@
             try {
                 const response = await fetch(EXCEL_FILE_NAME + '?t=' + Date.now()); 
                 if (!response.ok) throw new Error("File not found");
+                
+                // ★最終更新日時の取得★
+                const lastModified = response.headers.get('Last-Modified');
+                if (lastModified) {
+                    const date = new Date(lastModified);
+                    const dateStr = date.toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('lastUpdated').innerText = "Last Updated: " + dateStr;
+                } else {
+                    document.getElementById('lastUpdated').innerText = "Last Updated: Unknown";
+                }
+
                 const arrayBuffer = await response.arrayBuffer();
                 const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
                 
@@ -225,7 +232,6 @@
                 statsData[m.winner].wins++; statsData[m.winner].total++; 
                 statsData[m.loser].losses++; statsData[m.loser].total++; 
                 statsData[m.winner].vs[m.loser]++; 
-                
                 statsData[m.winner].currentStreak = statsData[m.winner].currentStreak < 0 ? 1 : statsData[m.winner].currentStreak + 1;
                 statsData[m.loser].currentStreak = statsData[m.loser].currentStreak > 0 ? -1 : statsData[m.loser].currentStreak - 1;
             });
@@ -235,6 +241,7 @@
             statsData.forEach(s => { if(s.currentStreak >= 3 && s.currentStreak > topStreak) { topStreak = s.currentStreak; topName = s.name; } });
             if (topStreak > 0) { banner.style.display = "block"; banner.innerHTML = `🔥 ${topName} が ${topStreak}連勝中！ 🔥`; } else { banner.style.display = "none"; }
 
+            // ★順位表の描画変更（モルック風・項目削減）★
             const tbody = document.getElementById('rankingBody'); tbody.innerHTML = "";
             [...statsData].sort((a, b) => {
                 const rateA = a.total ? a.wins / a.total : 0;
@@ -242,18 +249,19 @@
                 if (rateB !== rateA) return rateB - rateA;
                 return b.wins - a.wins;
             }).forEach((s, i) => {
-                const rate = s.total ? (s.wins / s.total * 100).toFixed(1) : 0;
+                const rate = s.total ? (s.wins / s.total * 100).toFixed(1) : "0.0";
                 let streakText = "";
                 if(s.currentStreak >= 3) streakText = ` <span class="neon-text-p">🔥${s.currentStreak}</span>`;
                 else if(s.currentStreak <= -3) streakText = ` <span class="neon-text-b">☔${Math.abs(s.currentStreak)}</span>`;
                 
+                // 行クリックでモーダルを開く
                 tbody.innerHTML += `
-                    <tr onclick="openModal(${s.id})">
+                    <tr class="ranking-row" onclick="openModal(${s.id})">
                         <td>${i + 1}</td>
-                        <td class="player-name-cell">${s.name}${streakText}</td>
-                        <td><span class="neon-text-p">${s.wins}</span>-<span class="neon-text-b">${s.losses}</span></td>
+                        <td style="text-align:left; padding-left:15px;">
+                            <div class="player-name-main">${s.name} ${streakText}</div>
+                        </td>
                         <td>${rate}%</td>
-                        <td>${s.total}</td>
                     </tr>`;
             });
 
@@ -280,14 +288,27 @@
             const playerStats = statsData.find(p => p.id === playerId);
             if(!playerStats) return;
 
-            document.getElementById('modalTitle').innerText = `${playerStats.name} の戦績`;
+            document.getElementById('modalTitle').innerText = `${playerStats.name}`;
             const container = document.getElementById('modalCharts');
             const recentContainer = document.getElementById('modalRecent');
+            const totalStatsContainer = document.getElementById('modalTotalStats'); // 追加エリア
+            
             container.innerHTML = "";
             recentContainer.innerHTML = "";
+            totalStatsContainer.innerHTML = "";
+            
             modalChartInstances.forEach(c => c.destroy());
             modalChartInstances = [];
 
+            // ★1. 通算成績を表示★
+            const rate = playerStats.total ? (playerStats.wins / playerStats.total * 100).toFixed(1) : "0.0";
+            totalStatsContainer.innerHTML = `
+                <div>Total Score</div>
+                <div><span class="win-count">${playerStats.wins}勝</span> <span class="loss-count">${playerStats.losses}敗</span></div>
+                <div class="total-stats-detail">(${playerStats.total}戦 / 勝率 ${rate}%)</div>
+            `;
+
+            // ★2. 直近成績を表示★
             const myMatches = matches
                 .filter(m => m.winner === playerId || m.loser === playerId)
                 .sort((a, b) => b._order - a._order)
@@ -301,11 +322,9 @@
                 displayMatches.forEach(m => {
                     if (m.winner === playerId) {
                         wCount++;
-                        // ★修正★ CSSで描画する白星マーク
                         historyHtml += '<span class="mark-common mark-win"></span>';
                     } else {
                         lCount++;
-                        // ★修正★ CSSで描画する黒星マーク
                         historyHtml += '<span class="mark-common mark-loss"></span>';
                     }
                 });
@@ -319,6 +338,7 @@
                 recentContainer.innerHTML = `<div style="color:#666">対戦データがありません</div>`;
             }
 
+            // ★3. 対戦相手別グラフ★
             const opponents = players.filter(opp => opp.id !== playerId);
             opponents.forEach(opp => {
                 const win = playerStats.vs[opp.id];
